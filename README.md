@@ -44,6 +44,10 @@ dotnet build src/ModernMozart.App -t:Run -f net10.0-android          # deploy to
 dotnet publish src/ModernMozart.App -c Release -f net10.0-android    # sideloadable *-Signed.apk
 ```
 
-CI (`.github/workflows/build.yml`) runs the tests and publishes the APK as a build artifact on every push.
+CI (`.github/workflows/build.yml`) runs the tests, builds the APK, and on `main` publishes it as a release.
+
+**Install on a phone:** open https://github.com/x509cert/ModernMozart/releases/latest/download/ModernMozart.apk in Chrome → Open → Install.
+
+Release signing uses the `KEYSTORE_B64` (base64 PKCS#12, alias `modernmozart`) and `KEYSTORE_PASSWORD` repo secrets; without them CI signs with a throwaway debug key and builds won't install over each other.
 
 Min Android: 7.0 (API 24).

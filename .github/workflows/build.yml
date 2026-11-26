@@ -18,6 +18,8 @@ jobs:
   android:
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: write          # publish the release
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
@@ -28,8 +30,41 @@ jobs:
           distribution: temurin
           java-version: 17
       - run: dotnet workload install maui-android
-      - run: dotnet publish src/ModernMozart.App -c Release -f net10.0-android -o publish
+
+      # Signed with the release key when the KEYSTORE_B64 / KEYSTORE_PASSWORD secrets exist,
+      # so each build installs over the last. Without them it falls back to a throwaway debug key.
+      - name: Publish APK
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          SIGN=()
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.p12"
+            SIGN=(-p:AndroidKeyStore=true
+                  -p:AndroidSigningKeyStore="$RUNNER_TEMP/release.p12"
+                  -p:AndroidSigningKeyAlias=modernmozart
+                  -p:AndroidSigningStorePass=env:KEYSTORE_PASSWORD
+                  -p:AndroidSigningKeyPass=env:KEYSTORE_PASSWORD)
+            echo "Signing with release key"
+          else
+            echo "::warning::KEYSTORE_B64 not set — signing with a throwaway debug key"
+          fi
+          dotnet publish src/ModernMozart.App -c Release -f net10.0-android -o publish "${SIGN[@]}"
+          cp publish/*-Signed.apk ModernMozart.apk
+
       - uses: actions/upload-artifact@v5
         with:
           name: ModernMozart-apk
-          path: publish/*-Signed.apk
+          path: ModernMozart.apk
+
+      # Phone-friendly link: .../releases/latest/download/ModernMozart.apk
+      - name: Release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" ModernMozart.apk \
+            --title "Build ${{ github.run_number }}" \
+            --notes "Built from ${GITHUB_SHA::7}. Open on your phone and tap Install." \
+            --latest
