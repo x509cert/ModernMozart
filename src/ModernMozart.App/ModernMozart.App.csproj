@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>ModernMozart.App</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+
+    <ApplicationTitle>Mozart Dice Waltz</ApplicationTitle>
+    <ApplicationId>com.x509cert.modernmozart</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- AudioTrack.Builder + PCM float output need API 23+. -->
+    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!-- Sideloadable APK for Release (default would be .aab for Play Store). -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0F1626" />
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F1626" BaseSize="128,128" />
+    <!-- Drop a piano SoundFont here as piano.sf2 to bundle it. -->
+    <MauiAsset Include="Resources\Raw\**" Exclude="Resources\Raw\*.md" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModernMozart.Core\ModernMozart.Core.csproj" />
+  </ItemGroup>
+
+</Project>

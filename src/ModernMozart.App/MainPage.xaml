@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ModernMozart.App.ViewModels"
+             x:Class="ModernMozart.App.MainPage"
+             x:DataType="vm:MainViewModel"
+             Title="Mozart Dice Waltz">
+
+    <ContentPage.Resources>
+        <!-- One bar of the sixteen. Tap to re-throw that position. -->
+        <DataTemplate x:Key="CellTemplate" x:DataType="vm:MeasureCell">
+            <Border
+                    FlexLayout.Basis="25%"
+                    Margin="4"
+                    Padding="4,8"
+                    HeightRequest="78"
+                    BackgroundColor="{StaticResource Ink}"
+                    Stroke="{StaticResource CardEdge}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer
+                        Command="{Binding RerollCommand, Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, x:DataType=vm:MainViewModel}"
+                        CommandParameter="{Binding .}" />
+                </Border.GestureRecognizers>
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding IsCurrent}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{StaticResource Gilt}" />
+                        <Setter Property="Stroke" Value="{StaticResource Gilt}" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <VerticalStackLayout Spacing="0" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="{Binding Position}" Style="{StaticResource Caption}" FontSize="10"
+                           HorizontalTextAlignment="Center">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsCurrent}" Value="True">
+                                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Label Text="{Binding Measure}" FontFamily="serif" FontSize="22" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsCurrent}" Value="True">
+                                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Label Text="{Binding Dice}" Style="{StaticResource Caption}" FontSize="11"
+                           HorizontalTextAlignment="Center">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsCurrent}" Value="True">
+                                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                </VerticalStackLayout>
+            </Border>
+        </DataTemplate>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16,24,16,32" Spacing="16">
+
+            <!-- Title -->
+            <VerticalStackLayout Spacing="2">
+                <Label Text="Musikalisches Würfelspiel" FontFamily="serif" FontSize="26"
+                       TextColor="{StaticResource Gilt}" />
+                <Label Text="W. A. MOZART  ·  K. 516f  ·  1787" Style="{StaticResource Caption}" />
+            </VerticalStackLayout>
+
+            <!-- Now playing -->
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="{Binding NowPlayingTitle}" FontFamily="serif" FontSize="30" />
+                    <Label Text="{Binding NowPlayingDetail}" TextColor="{StaticResource Muted}" FontSize="13" />
+                    <ProgressBar Progress="{Binding Progress}" Margin="0,8,0,0" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="{Binding TimeLabel}" Style="{StaticResource Caption}" />
+                        <Label Grid.Column="1" Text="{Binding LengthLabel, StringFormat='length {0}'}"
+                               Style="{StaticResource Caption}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Transport -->
+            <Grid ColumnDefinitions="*,2*,*" ColumnSpacing="8">
+                <Button Text="🎲 Roll" Command="{Binding RollCommand}" />
+                <Button Grid.Column="1" Text="{Binding PlayButtonText}" Command="{Binding PlayCommand}"
+                        Style="{StaticResource PrimaryButton}" />
+                <Button Grid.Column="2" Text="Share" Command="{Binding ShareMidiCommand}" />
+            </Grid>
+
+            <!-- The sixteen bars -->
+            <Border Style="{StaticResource CardBorder}" Padding="12">
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="PART A  ·  BARS 1–8" Style="{StaticResource Caption}" />
+                        <Label Grid.Column="1" Text="{Binding SeedLabel}" Style="{StaticResource Caption}" />
+                    </Grid>
+                    <FlexLayout Wrap="Wrap" JustifyContent="Start"
+                                BindableLayout.ItemsSource="{Binding SectionA}"
+                                BindableLayout.ItemTemplate="{StaticResource CellTemplate}" />
+                    <Label Text="PART B  ·  BARS 9–16" Style="{StaticResource Caption}" Margin="0,8,0,0" />
+                    <FlexLayout Wrap="Wrap" JustifyContent="Start"
+                                BindableLayout.ItemsSource="{Binding SectionB}"
+                                BindableLayout.ItemTemplate="{StaticResource CellTemplate}" />
+                    <Label Text="Tap a bar to re-throw the dice for that position."
+                           Style="{StaticResource Caption}" HorizontalTextAlignment="Center" Margin="0,4,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Performance settings -->
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="TEMPO" Style="{StaticResource Caption}" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding TempoLabel}" FontFamily="serif" FontSize="18" />
+                    </Grid>
+                    <Slider Minimum="60" Maximum="200" Value="{Binding TempoSlider}" IsEnabled="{Binding IsIdle}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout VerticalOptions="Center">
+                            <Label Text="Observe repeats" />
+                            <Label Text="AABB — each half played twice, as written"
+                                   Style="{StaticResource Caption}" CharacterSpacing="0" />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1" IsToggled="{Binding ObserveRepeats}" IsEnabled="{Binding IsIdle}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Piano / sound engine -->
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="PIANO" Style="{StaticResource Caption}" />
+                    <Label Text="{Binding EngineName}" FontFamily="serif" FontSize="18" />
+                    <Label IsVisible="{Binding UsingBuiltInSynth}" Style="{StaticResource Caption}" CharacterSpacing="0"
+                           Text="For a real concert grand, load a piano SoundFont (.sf2). It is rendered on-device by MeltySynth." />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Button Text="Load SoundFont…" Command="{Binding LoadSoundFontCommand}" />
+                        <Button Grid.Column="1" Text="Remove" Command="{Binding RemoveSoundFontCommand}"
+                                IsVisible="{Binding HasImportedSoundFont}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

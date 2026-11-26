@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ModernMozart.App.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Palette: a candle-lit concert programme -->
+            <Color x:Key="Ink">#0F1626</Color>
+            <Color x:Key="Card">#18213A</Color>
+            <Color x:Key="CardEdge">#2A3555</Color>
+            <Color x:Key="Gilt">#D4A84B</Color>
+            <Color x:Key="GiltDim">#8C7036</Color>
+            <Color x:Key="Parchment">#F3EBDD</Color>
+            <Color x:Key="Muted">#9AA3B5</Color>
+
+            <Style TargetType="ContentPage" ApplyToDerivedTypes="True">
+                <Setter Property="BackgroundColor" Value="{StaticResource Ink}" />
+            </Style>
+
+            <Style TargetType="Label">
+                <Setter Property="TextColor" Value="{StaticResource Parchment}" />
+                <Setter Property="FontSize" Value="15" />
+            </Style>
+
+            <Style x:Key="Caption" TargetType="Label">
+                <Setter Property="TextColor" Value="{StaticResource Muted}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="CharacterSpacing" Value="1.2" />
+            </Style>
+
+            <Style x:Key="CardBorder" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource Card}" />
+                <Setter Property="Stroke" Value="{StaticResource CardEdge}" />
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+                <Setter Property="Padding" Value="16" />
+            </Style>
+
+            <Style TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{StaticResource Card}" />
+                <Setter Property="TextColor" Value="{StaticResource Parchment}" />
+                <Setter Property="BorderColor" Value="{StaticResource CardEdge}" />
+                <Setter Property="BorderWidth" Value="1" />
+                <Setter Property="CornerRadius" Value="24" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="MinimumHeightRequest" Value="48" />
+                <Setter Property="Padding" Value="16,0" />
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup x:Name="CommonStates">
+                            <VisualState x:Name="Normal" />
+                            <VisualState x:Name="Disabled">
+                                <VisualState.Setters>
+                                    <Setter Property="Opacity" Value="0.4" />
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+            </Style>
+
+            <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="BackgroundColor" Value="{StaticResource Gilt}" />
+                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                <Setter Property="BorderColor" Value="{StaticResource Gilt}" />
+                <Setter Property="FontAttributes" Value="Bold" />
+            </Style>
+
+            <Style TargetType="Slider">
+                <Setter Property="MinimumTrackColor" Value="{StaticResource Gilt}" />
+                <Setter Property="MaximumTrackColor" Value="{StaticResource CardEdge}" />
+                <Setter Property="ThumbColor" Value="{StaticResource Gilt}" />
+            </Style>
+
+            <Style TargetType="Switch">
+                <Setter Property="OnColor" Value="{StaticResource GiltDim}" />
+                <Setter Property="ThumbColor" Value="{StaticResource Gilt}" />
+            </Style>
+
+            <Style TargetType="ProgressBar">
+                <Setter Property="ProgressColor" Value="{StaticResource Gilt}" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

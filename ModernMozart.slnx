@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ModernMozart.Core/ModernMozart.Core.csproj" />
+    <Project Path="src/ModernMozart.App/ModernMozart.App.csproj">
+      <Deploy />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ModernMozart.Core.Tests/ModernMozart.Core.Tests.csproj" />
+  </Folder>
+</Solution>
