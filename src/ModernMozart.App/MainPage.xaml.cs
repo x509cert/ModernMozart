@@ -23,6 +23,8 @@ public partial class MainPage : ContentPage
         await _vm.InitializeAsync();
     }
 
+    private async void OnHelp(object? sender, EventArgs e) => await Navigation.PushModalAsync(new AboutPage());
+
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)

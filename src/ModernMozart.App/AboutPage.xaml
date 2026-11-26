@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ModernMozart.App.AboutPage"
+             Title="About">
+
+    <ContentPage.Resources>
+        <Style x:Key="Heading" TargetType="Label">
+            <Setter Property="FontFamily" Value="serif" />
+            <Setter Property="FontSize" Value="21" />
+            <Setter Property="TextColor" Value="{StaticResource Gilt}" />
+            <Setter Property="Margin" Value="0,10,0,0" />
+        </Style>
+        <Style x:Key="Body" TargetType="Label">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="LineHeight" Value="1.3" />
+            <Setter Property="TextColor" Value="{StaticResource Parchment}" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,28,20,16" Spacing="10">
+
+                <Label Text="Musikalisches Würfelspiel" FontFamily="serif" FontSize="26" TextColor="{StaticResource Gilt}" />
+                <Label Text="Musical Dice Game" FontFamily="serif" FontAttributes="Italic" FontSize="17"
+                       TextColor="{StaticResource Parchment}" />
+
+                <!-- The app -->
+                <Label Text="This app" Style="{StaticResource Heading}" />
+                <Label Style="{StaticResource Body}"
+                       Text="Roll the dice and the app composes a sixteen-bar waltz from Mozart's table, plays it on a piano, and shows it as a score while it plays. Tap any bar to re-throw the dice for just that bar. Share sends the waltz as a MIDI file." />
+                <Label Style="{StaticResource Body}"
+                       Text="For the best sound, load a piano SoundFont (.sf2): the piano is then synthesised on the phone, sample by sample. Without one, Android's built-in synthesiser plays it." />
+
+                <!-- The game -->
+                <Label Text="The dice game" Style="{StaticResource Heading}" />
+                <Label Style="{StaticResource Body}"
+                       Text="In 1793 the Berlin publisher Nikolaus Simrock printed instructions for composing &quot;as many waltzes as one pleases&quot; with two dice, under Mozart's name. Musical dice games were a popular parlour amusement at the time. Whether Mozart devised this one is still debated; it is catalogued as K. Anh. 294d, and linked to K. 516f, a manuscript in Mozart's hand from 1787." />
+                <Label Style="{StaticResource Body}"
+                       Text="The game is a table of 176 pre-composed bars: sixteen columns, one for each bar of the waltz, and eleven rows, one for each total you can throw with two dice (2 to 12). For each bar you throw both dice and take the bar in that column and row." />
+                <Label Style="{StaticResource Body}"
+                       Text="It works because the eleven bars in each column are interchangeable: they share the same harmony and lead the same way, so any choice fits its neighbours. The waltz is in G major and 3/4 time, in two eight-bar halves, each played twice (AABB)." />
+                <Label Style="{StaticResource Body}"
+                       Text="Two dice don't throw evenly: a 7 comes up one time in six, a 2 or 12 only one time in 36, so the bars in the middle row are heard far more often. There are 11¹⁶ — about 46 quadrillion — ways to roll. A few bars in the original table are identical, so the number of truly different waltzes is smaller, but still hundreds of trillions." />
+                <Label Style="{StaticResource Body}" TextColor="{StaticResource Muted}" FontSize="13"
+                       Text="The app stores all 176 bars as note data. Some are reconstructions in Mozart's style rather than note-for-note transcriptions of the 1793 edition." />
+
+                <!-- The staves -->
+                <Label Text="How the staves are drawn" Style="{StaticResource Heading}" />
+                <Label Style="{StaticResource Body}"
+                       Text="Each bar is stored as a list of notes: pitch, start time, length, and which hand plays it. Nothing is a picture: the score is engraved from that data every time you roll." />
+                <Label Style="{StaticResource Body}"
+                       Text="The right hand goes on the treble staff, the left hand on the bass staff, joined by a brace as in piano music. Each pitch is spelled in G major and placed on its line or space; the key signature's F♯ means no other sharps are needed. Notes above or below the staff get ledger lines." />
+                <Label Style="{StaticResource Body}"
+                       Text="A note's value (quarter, eighth, sixteenth) comes from the time until the next note in that hand. That is why the short, detached waltz chords in the left hand are written as quarter notes, the way Mozart would have written them." />
+                <Label Style="{StaticResource Body}"
+                       Text="Stems point away from the note farthest from the middle line. Eighths and sixteenths within the same beat are joined by beams, sloped to follow the melody. Notes are spaced in proportion to time, so the playhead passes through each note exactly as you hear it." />
+                <Label Style="{StaticResource Body}"
+                       Text="The clefs, noteheads, flags and sharps are drawn from Bravura, the open music font made by Steinberg for the SMuFL standard, using its own rules for line and stem thicknesses. The small number above each bar is that bar's number in Mozart's table." />
+
+                <Label Style="{StaticResource Body}" TextColor="{StaticResource Muted}" FontSize="12" Margin="0,16,0,0"
+                       Text="Piano synthesis: MeltySynth (MIT). Music glyphs: Bravura (SIL Open Font License)." />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Button Grid.Row="1" Text="Close" Clicked="OnClose" Style="{StaticResource PrimaryButton}" Margin="20,8,20,20" />
+    </Grid>
+</ContentPage>

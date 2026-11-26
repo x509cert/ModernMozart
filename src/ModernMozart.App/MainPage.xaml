@@ -75,14 +75,21 @@
     <Grid RowDefinitions="Auto,*">
         <!-- Pinned: title, now playing, transport — Stop stays reachable while the score scrolls -->
         <VerticalStackLayout Padding="16,20,16,12" Spacing="12" BackgroundColor="{StaticResource Ink}">
-            <!-- Title -->
-            <VerticalStackLayout Spacing="2">
-                <Label Text="Musikalisches Würfelspiel" FontFamily="serif" FontSize="26"
-                       TextColor="{StaticResource Gilt}" />
-                <Label Text="Musical Dice Game" FontFamily="serif" FontAttributes="Italic" FontSize="17"
-                       TextColor="{StaticResource Parchment}" Margin="0,0,0,4" />
-                <Label Text="W. A. MOZART  ·  K. 516f  ·  1787" Style="{StaticResource Caption}" />
-            </VerticalStackLayout>
+            <!-- Title + help -->
+            <Grid ColumnDefinitions="*,Auto">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Musikalisches Würfelspiel" FontFamily="serif" FontSize="26"
+                           TextColor="{StaticResource Gilt}" />
+                    <Label Text="Musical Dice Game" FontFamily="serif" FontAttributes="Italic" FontSize="17"
+                           TextColor="{StaticResource Parchment}" Margin="0,0,0,4" />
+                    <Label Text="W. A. MOZART  ·  K. 516f  ·  1787" Style="{StaticResource Caption}" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1" Text="i" Clicked="OnHelp" VerticalOptions="Start"
+                        WidthRequest="40" HeightRequest="40" MinimumHeightRequest="40" CornerRadius="20" Padding="0"
+                        FontFamily="serif" FontAttributes="Bold,Italic" FontSize="20"
+                        TextColor="{StaticResource Gilt}" BorderColor="{StaticResource GiltDim}"
+                        SemanticProperties.Description="About this app" />
+            </Grid>
 
             <!-- Now playing -->
             <Border Style="{StaticResource CardBorder}">
