@@ -11,5 +11,5 @@ Currently:
 - **Piano.sf2**: *Upright Piano KW* (small), a Kawai upright recorded by Gonzalo and Roberto,
   from [FreePats](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html), CC0 1.0 (public domain).
 
-To add the brighter variant, download *Small bright SF2* from that page, extract it from the `.7z`,
-and add the `.sf2` here (any name, e.g. `Piano-Bright.sf2`).
+To add another (e.g. the brighter variant), see [Pianos (SoundFonts)](../../../../README.md#pianos-soundfonts)
+for the download links, then add the `.sf2` here under any name, e.g. `Piano-Bright.sf2`.

@@ -49,7 +49,7 @@ You can switch it back off for Chrome after installing.
 loaded SoundFont are kept. If Android says *"App not installed as package conflicts with an existing package"*, the
 installed copy was signed with a different key (early builds were); uninstall it once, then install.
 
-**Better piano sound:** in the app, tap **Load SoundFont…** and pick a piano `.sf2` file you've downloaded to the phone.
+**More pianos:** see [Pianos (SoundFonts)](#pianos-soundfonts) to add the brighter upright or another piano.
 
 ### Install from a PC over USB (Developer mode< NOT recommended unless you currently do Android development)
 
@@ -81,6 +81,40 @@ dotnet build src/ModernMozart.App -t:Run -f net10.0-android
 Or install a downloaded APK with `adb install -r ModernMozart.apk`.
 
 When you're done, you can turn **USB debugging** (or all of **Developer options**) off again in the same menu.
+
+## Pianos (SoundFonts)
+
+The piano is played from SoundFont (`.sf2`) files: recordings of a real piano, note by note, rendered on the phone.
+The app ships with **Upright Piano KW (small)**, and you pick between pianos in the **PIANO** dropdown.
+
+Upright Piano KW is a Kawai upright recorded by Gonzalo and Roberto, published by
+[FreePats](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) under CC0 (public domain). It comes in three SF2 banks:
+
+| Bank | Download (`.7z`) | Size of the `.sf2` | |
+|---|---|---|---|
+| Small | [UprightPianoKW-small-SF2-20190703.7z](https://freepats.zenvoid.org/Piano/UprightPianoKW/UprightPianoKW-small-SF2-20190703.7z) | 10 MB | bundled as `Piano.sf2` |
+| Small bright | [UprightPianoKW-small-bright-SF2-20190703.7z](https://freepats.zenvoid.org/Piano/UprightPianoKW/UprightPianoKW-small-bright-SF2-20190703.7z) | 10 MB | a brighter tone |
+| Full | [UprightPianoKW-SF2-20220221.7z](https://freepats.zenvoid.org/Piano/UprightPianoKW/UprightPianoKW-SF2-20220221.7z) | 56 MB | best quality, slower to load |
+
+Each download is a `.7z` archive with the `.sf2` inside. Any other piano SoundFont works too; the app plays bank 0, program 0.
+
+### Add a piano on your phone
+
+1. On the phone, tap one of the download links above in Chrome.
+2. Extract the `.7z`. If your phone's **Files** app can't open it, install an archive app that handles 7z, such as
+   **ZArchiver** or **RAR** (by RARLAB), from the Play Store. Open the downloaded `.7z` in it and extract it to **Download**.
+3. In Mozart Dice Waltz, scroll to **PIANO** and tap **Load SoundFont…**, then pick the extracted `.sf2`.
+   It's added to the dropdown and selected.
+
+You can keep one loaded piano at a time: loading another replaces it, and **Remove** deletes it.
+The bundled pianos are always in the dropdown.
+
+### Bundle a piano in the app
+
+To make a piano part of every build, upload the extracted `.sf2` to
+[`src/ModernMozart.App/Resources/Raw/`](src/ModernMozart.App/Resources/Raw) (GitHub's **Add file → Upload files** works from a
+phone's browser too), under any name, e.g. `Piano-Bright.sf2`. The next build lists it in the dropdown by its own name.
+Every bundled `.sf2` adds its size to the APK. `Piano.sf2` is the default for new installs.
 
 ## Layout
 
