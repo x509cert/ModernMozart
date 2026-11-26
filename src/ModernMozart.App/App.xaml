@@ -36,7 +36,7 @@
                 <Setter Property="Padding" Value="16" />
             </Style>
 
-            <Style TargetType="Button">
+            <Style x:Key="BaseButton" TargetType="Button">
                 <Setter Property="BackgroundColor" Value="{StaticResource Card}" />
                 <Setter Property="TextColor" Value="{StaticResource Parchment}" />
                 <Setter Property="BorderColor" Value="{StaticResource CardEdge}" />
@@ -59,7 +59,10 @@
                 </Setter>
             </Style>
 
-            <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <!-- Implicit style for every Button. -->
+            <Style TargetType="Button" BasedOn="{StaticResource BaseButton}" />
+
+            <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
                 <Setter Property="BackgroundColor" Value="{StaticResource Gilt}" />
                 <Setter Property="TextColor" Value="{StaticResource Ink}" />
                 <Setter Property="BorderColor" Value="{StaticResource Gilt}" />
