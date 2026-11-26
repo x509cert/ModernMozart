@@ -73,6 +73,29 @@ public class PerformancePlanTests
         Assert.Equal(ev.Count(e => e.Command == 0x90), ev.Count(e => e.IsNoteOff));
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void Closing_chord_is_held_past_the_final_barline(int passes)
+    {
+        var plan = PerformancePlan.Create(Roll, 138, passes);
+        var heldTo = plan.Events.Where(e => e.IsNoteOff && e.Tick == plan.EndTick).ToList();
+
+        Assert.True(plan.EndTick > plan.TotalTicks);
+        Assert.InRange((plan.Length - TimeSpan.FromSeconds(plan.TotalTicks * plan.SecondsPerTick)).TotalSeconds,
+                       PerformancePlan.FinalHold.TotalSeconds - 0.01, PerformancePlan.FinalHold.TotalSeconds + 0.01);
+        Assert.Contains(heldTo, e => e.Channel == PerformancePlan.RightHand);
+        Assert.Contains(heldTo, e => e.Channel == PerformancePlan.LeftHand);
+
+        // The held left hand includes the bar's bass note, the lowest pitch held.
+        var bar = MeasureLibrary.Get(plan.Slots[^1].Entry.Measure);
+        int bass = bar.Where(n => n.Channel == PerformancePlan.LeftHand).MinBy(n => n.AbsTick * 1000 + n.Pitch).Pitch;
+        Assert.Contains(heldTo, e => e.Channel == PerformancePlan.LeftHand && e.Data1 == bass);
+
+        // Nothing else is held: every other note ends within the written music.
+        Assert.All(plan.Events.Where(e => e.IsNoteOff && e.Tick != plan.EndTick), e => Assert.True(e.Tick <= plan.TotalTicks));
+    }
+
     [Fact]
     public void Slot_lookup_maps_time_to_bar()
     {

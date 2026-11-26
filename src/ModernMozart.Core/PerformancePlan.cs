@@ -23,10 +23,19 @@ public sealed class PerformancePlan
     /// <summary>Sorted by tick; at equal ticks note-offs come first so repeated notes re-strike.</summary>
     public ImmutableArray<MidiEvent> Events { get; }
 
+    /// <summary>How long the closing chord is held past the final barline, as under a fermata.</summary>
+    public static readonly TimeSpan FinalHold = TimeSpan.FromSeconds(2.5);
+
+    /// <summary>Ticks of written music (up to the final barline).</summary>
     public long TotalTicks      => (long)Slots.Length * TicksPerMeasure;
-    public double SecondsPerTick => 60.0 / (Bpm * TicksPerQuarter);
+    /// <summary>Ticks until the held closing chord is released.</summary>
+    public long EndTick         => TotalTicks + HoldTicks(Bpm);
+    public double SecondsPerTick => SecondsPerTickAt(Bpm);
     public TimeSpan MeasureLength => TimeSpan.FromSeconds(TicksPerMeasure * SecondsPerTick);
-    public TimeSpan Length        => TimeSpan.FromSeconds(TotalTicks * SecondsPerTick);
+    public TimeSpan Length        => TimeSpan.FromSeconds(EndTick * SecondsPerTick);
+
+    private static double SecondsPerTickAt(int bpm) => 60.0 / (bpm * TicksPerQuarter);
+    private static long HoldTicks(int bpm) => (long)Math.Round(FinalHold.TotalSeconds / SecondsPerTickAt(bpm));
 
     private PerformancePlan(WaltzRoll roll, int bpm, int passes)
     {
@@ -34,7 +43,7 @@ public sealed class PerformancePlan
         Bpm    = bpm;
         Passes = passes;
         Slots  = ExpandRepeats(roll, passes);
-        Events = Schedule(Slots);
+        Events = Schedule(Slots, EndTick);
     }
 
     /// <param name="passes">1 = straight through, 2 = observe both repeats (AABB).</param>
@@ -67,17 +76,46 @@ public sealed class PerformancePlan
     }
 
     // ── Event scheduling ─────────────────────────────────────────────────
-    private static ImmutableArray<MidiEvent> Schedule(ImmutableArray<PerformanceSlot> slots)
+
+    /// <summary>
+    /// Notes that ring on at the very end: each hand's last chord, plus the left hand's bass
+    /// note from the start of the bar, so the held sound is a full chord rather than an
+    /// unsupported treble.
+    /// </summary>
+    private static HashSet<NoteEvent> ClosingChord(NoteEvent[] bar)
+    {
+        var held = new HashSet<NoteEvent>();
+        foreach (byte hand in (byte[])[RightHand, LeftHand])
+        {
+            var notes = bar.Where(n => n.Channel == hand).ToArray();
+            if (notes.Length == 0) continue;
+            long last = notes.Max(n => n.AbsTick);
+            held.UnionWith(notes.Where(n => n.AbsTick == last));
+        }
+
+        var leftHand = bar.Where(n => n.Channel == LeftHand).ToArray();
+        if (leftHand.Length > 0)
+        {
+            long first = leftHand.Min(n => n.AbsTick);
+            held.Add(leftHand.Where(n => n.AbsTick == first).MinBy(n => n.Pitch));
+        }
+        return held;
+    }
+
+    private static ImmutableArray<MidiEvent> Schedule(ImmutableArray<PerformanceSlot> slots, long endTick)
     {
         var events = new List<MidiEvent>(slots.Length * 24);
 
         foreach (var slot in slots)
         {
             long barStart = (long)slot.Index * TicksPerMeasure;
-            foreach (var n in MeasureLibrary.Get(slot.Entry.Measure))
+            var notes = MeasureLibrary.Get(slot.Entry.Measure);
+            var held  = slot.Index == slots.Length - 1 ? ClosingChord(notes) : [];
+
+            foreach (var n in notes)
             {
                 long on  = barStart + n.AbsTick;
-                long off = on + Math.Max(1, n.DurTicks);
+                long off = held.Contains(n) ? endTick : on + Math.Max(1, n.DurTicks);
                 events.Add(new(on,  (byte)(0x90 | n.Channel), n.Pitch, n.Velocity));
                 events.Add(new(off, (byte)(0x80 | n.Channel), n.Pitch, 0));
             }

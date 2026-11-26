@@ -111,12 +111,13 @@ public sealed class ScoreEngraver(float staffSpace)
             {
                 int index = first + i;
                 float bx  = left + header + barW * i;
-                c.Text(measures[index].ToString(), bx + 0.3f * S, top - 3.0f * S, 1.4f * S);
-                DrawBar(c, MeasureLibrary.Get(measures[index]), bx, barW, top, bassTop);
-
-                float x = bx + barW;
                 int pieceIndex = FirstBarIndex + index, total = PieceLength > 0 ? PieceLength : measures.Count;
                 bool last = pieceIndex == total - 1;
+
+                c.Text(measures[index].ToString(), bx + 0.3f * S, top - 3.0f * S, 1.4f * S);
+                DrawBar(c, MeasureLibrary.Get(measures[index]), bx, barW, top, bassTop, fermata: last);
+
+                float x = bx + barW;
                 bool endOfA = pieceIndex == WaltzRoll.HalfLength - 1 && total == WaltzRoll.Length;
                 if (last)
                 {
@@ -155,7 +156,8 @@ public sealed class ScoreEngraver(float staffSpace)
     }
 
     // ── One bar, both hands ───────────────────────────────────────────────
-    private void DrawBar(IScoreCanvas c, NoteEvent[] notes, float bx, float barW, float top, float bassTop)
+    /// <param name="fermata">Final bar: mark the closing chord as held (the performance holds it).</param>
+    private void DrawBar(IScoreCanvas c, NoteEvent[] notes, float bx, float barW, float top, float bassTop, bool fermata)
     {
         float x0 = bx + BarPadLeft * S, inner = barW - BarPadTotal * S;
         float X(long tick) => x0 + tick * inner / PerformancePlan.TicksPerMeasure;
@@ -166,8 +168,12 @@ public sealed class ScoreEngraver(float staffSpace)
         {
             var staff  = new Staff(this, staffBottomY, bottomStep);
             var chords = BuildChords(notes, channel, X);
-            foreach (var group in BeamGroups(chords))
+            var groups = BeamGroups(chords).ToList();
+            foreach (var group in groups)
                 staff.DrawGroup(c, group);
+
+            if (fermata && groups.Count > 0)
+                staff.DrawFermata(c, groups[^1], above: channel == PerformancePlan.RightHand);
         }
     }
 
@@ -272,6 +278,26 @@ public sealed class ScoreEngraver(float staffSpace)
         private float S => e.S;
         private int Middle => bottomStep + 4;
         private float Y(int step) => bottomY - (step - bottomStep) * S / 2;
+
+        /// <summary>Fermata over (treble) or under (bass) the group's last chord, clear of stems and the staff.</summary>
+        public void DrawFermata(IScoreCanvas c, List<Chord> group, bool above)
+        {
+            const float Gap = 0.7f, HalfWidth = 1.21f;       // fermata glyph is 2.42 spaces wide
+            bool up = Middle - group.Min(g => g.Low) > group.Max(g => g.High) - Middle;
+            var ch = group[^1];
+            float x = ch.X + (HeadW / 2 - HalfWidth) * S;
+
+            if (above)
+            {
+                float extent = up && ch.Value.Stem ? Math.Min(Y(ch.High) - StemLen * S, Y(Middle)) : Y(ch.High) - S / 2;
+                c.Glyph(Glyph.FermataAbove, x, Math.Min(Y(bottomStep + 8), extent) - Gap * S, S);
+            }
+            else
+            {
+                float extent = !up && ch.Value.Stem ? Math.Max(Y(ch.Low) + StemLen * S, Y(Middle)) : Y(ch.Low) + S / 2;
+                c.Glyph(Glyph.FermataBelow, x, Math.Max(Y(bottomStep), extent) + Gap * S, S);
+            }
+        }
 
         public void DrawGroup(IScoreCanvas c, List<Chord> group)
         {

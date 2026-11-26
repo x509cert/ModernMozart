@@ -21,7 +21,7 @@ public static class MidiFileWriter
     {
         byte[][] tracks =
         [
-            TempoTrack(60_000_000 / plan.Bpm, plan.TotalTicks),
+            TempoTrack(60_000_000 / plan.Bpm, plan.EndTick),
             NoteTrack(plan, PerformancePlan.RightHand, "Right hand"),
             NoteTrack(plan, PerformancePlan.LeftHand,  "Left hand"),
         ];
@@ -66,7 +66,7 @@ public static class MidiFileWriter
             prev = e.Tick;
         }
 
-        Meta(t, Math.Max(0, plan.TotalTicks - prev), 0x2F, []);
+        Meta(t, Math.Max(0, plan.EndTick - prev), 0x2F, []);
         return Chunk(t);
     }
 
