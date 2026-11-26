@@ -5,5 +5,7 @@ publish/
 .vscode/
 *.user
 *.suo
-# SoundFonts are large and individually licensed — don't commit them.
+# SoundFonts are large and individually licensed — don't commit them…
 *.sf2
+# …except the app's default piano.
+!src/ModernMozart.App/Resources/Raw/*.sf2

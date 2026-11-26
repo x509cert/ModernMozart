@@ -48,7 +48,9 @@ jobs:
           else
             echo "::warning::KEYSTORE_B64 not set — signing with a throwaway debug key"
           fi
-          dotnet publish src/ModernMozart.App -c Release -f net10.0-android -o publish "${SIGN[@]}"
+          # Build number → Android versionCode, so every release is a distinct, increasing version.
+          dotnet publish src/ModernMozart.App -c Release -f net10.0-android -o publish \
+            -p:ApplicationVersion=${{ github.run_number }} "${SIGN[@]}"
           cp publish/*-Signed.apk ModernMozart.apk
 
       - uses: actions/upload-artifact@v5
@@ -87,6 +89,8 @@ jobs:
             adb shell uiautomator dump /sdcard/ui.xml && adb pull /sdcard/ui.xml ui.xml
             grep -q "Würfelspiel" ui.xml || (echo "::error::Main page did not render" && exit 1)
             grep -q "Musical Dice Game" ui.xml || (echo "::error::English subtitle missing" && exit 1)
+            grep "ModernMozart: " logcat.txt || true
+            grep -q "SoundFont loaded (bundled)" logcat.txt || (echo "::error::Bundled SoundFont did not load" && exit 1)
             sh -c 'B=$(grep -o "text=\"i\"[^>]*bounds=\"\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]" ui.xml | grep -o "\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]" | tr "[],"  "   "); set -- $B; echo "Help button bounds: $B"; adb shell input tap $(( ($1+$3)/2 )) $(( ($2+$4)/2 ))'
             sleep 3
             adb shell uiautomator dump /sdcard/about.xml && adb pull /sdcard/about.xml about.xml

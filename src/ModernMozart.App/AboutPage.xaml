@@ -31,7 +31,7 @@
                 <Label Style="{StaticResource Body}"
                        Text="Roll the dice and the app composes a sixteen-bar waltz from Mozart's table, plays it on a piano, and shows it as a score while it plays. Tap any bar to re-throw the dice for just that bar. Share sends the waltz as a MIDI file." />
                 <Label Style="{StaticResource Body}"
-                       Text="For the best sound, load a piano SoundFont (.sf2): the piano is then synthesised on the phone, sample by sample. Without one, Android's built-in synthesiser plays it." />
+                       Text="The piano is synthesised on the phone, sample by sample, from a SoundFont (.sf2): recordings of a real piano, note by note. The app comes with a Kawai upright; Load SoundFont… lets you use any other, and Remove goes back to the upright." />
 
                 <!-- The game -->
                 <Label Text="The dice game" Style="{StaticResource Heading}" />
@@ -60,7 +60,7 @@
                        Text="The clefs, noteheads, flags and sharps are drawn from Bravura, the open music font made by Steinberg for the SMuFL standard, using its own rules for line and stem thicknesses. The small number above each bar is that bar's number in Mozart's table." />
 
                 <Label Style="{StaticResource Body}" TextColor="{StaticResource Muted}" FontSize="12" Margin="0,16,0,0"
-                       Text="Piano synthesis: MeltySynth (MIT). Music glyphs: Bravura (SIL Open Font License)." />
+                       Text="Piano: Upright Piano KW, recorded by Gonzalo and Roberto, FreePats (CC0). Synthesis: MeltySynth (MIT). Music glyphs: Bravura (SIL Open Font License)." />
             </VerticalStackLayout>
         </ScrollView>
 
