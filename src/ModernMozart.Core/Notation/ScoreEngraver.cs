@@ -20,6 +20,7 @@ public sealed class ScoreEngraver(float staffSpace)
 
     // ── System layout (staff spaces) ──────────────────────────────────────
     private const float Top = 4.5f, StaffGap = 7f, Bottom = 3.5f, MarginLeft = 1.8f, MinBar = 24f;
+    private const float BarPadLeft = 1.2f, BarPadTotal = 2.6f;          // notes are spaced inside this
     public const float SystemHeight = Top + 4 + StaffGap + 4 + Bottom;   // 23
 
     private const int TrebleBottom = 30;   // E4 (diatonic step index)
@@ -37,6 +38,27 @@ public sealed class ScoreEngraver(float staffSpace)
     {
         int per = BarsPerRow(width);
         return (barCount + per - 1) / per * SystemHeight * S;
+    }
+
+    /// <summary>Where a bar sits on the page, for highlighting and scrolling.</summary>
+    /// <param name="NoteX">x of the first beat's notehead centre; <see cref="At"/> moves through the bar.</param>
+    public readonly record struct BarBox(float X, float Width, float SystemTop, float StaffTop, float StaffBottom,
+                                         float NoteX, float NoteSpan)
+    {
+        /// <summary>x at <paramref name="fraction"/> (0–1) of the way through the bar, aligned with note centres.</summary>
+        public float At(double fraction) => NoteX + (float)Math.Clamp(fraction, 0, 1) * NoteSpan;
+    }
+
+    public BarBox Bar(int index, float width)
+    {
+        int per = BarsPerRow(width), row = index / per, col = index % per;
+        float left   = MarginLeft * S, right = width - ThickBar * S;
+        float header = HeaderWidth(timeSig: row == 0) * S;
+        float barW   = (right - left - header) / per;
+        float bx     = left + header + barW * col;
+        float top    = (row * SystemHeight + Top) * S;
+        return new(bx, barW, row * SystemHeight * S, top, top + (8 + StaffGap) * S,
+                   bx + (BarPadLeft + HeadW / 2) * S, barW - BarPadTotal * S);
     }
 
     // ── Drawing ───────────────────────────────────────────────────────────
@@ -118,7 +140,7 @@ public sealed class ScoreEngraver(float staffSpace)
     // ── One bar, both hands ───────────────────────────────────────────────
     private void DrawBar(IScoreCanvas c, NoteEvent[] notes, float bx, float barW, float top, float bassTop)
     {
-        float x0 = bx + 1.2f * S, inner = barW - 2.6f * S;
+        float x0 = bx + BarPadLeft * S, inner = barW - BarPadTotal * S;
         float X(long tick) => x0 + tick * inner / PerformancePlan.TicksPerMeasure;
 
         foreach (var (channel, staffBottomY, bottomStep) in

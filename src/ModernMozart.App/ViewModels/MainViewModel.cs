@@ -23,6 +23,7 @@ public sealed class MainViewModel : ObservableObject
     private string _nowPlayingTitle = "Ready", _nowPlayingDetail = "Tap Play — or tap any bar to re-throw it.";
     private string _timeLabel = "";
     private RollEntry? _currentEntry;
+    private double _scorePlayhead = -1;
     private double _progress;
 
     public MainViewModel(SoundFontStore soundFonts)
@@ -95,6 +96,9 @@ public sealed class MainViewModel : ObservableObject
     public string NowPlayingDetail { get => _nowPlayingDetail; private set => Set(ref _nowPlayingDetail, value); }
     public string TimeLabel        { get => _timeLabel;        private set => Set(ref _timeLabel, value); }
     public double Progress         { get => _progress;         private set => Set(ref _progress, value); }
+
+    /// <summary>Score position: bar index (0–15) + fraction through the bar; -1 when stopped.</summary>
+    public double ScorePlayhead    { get => _scorePlayhead;    private set => Set(ref _scorePlayhead, value); }
 
     /// <summary>The throw behind the bar being shown in the now-playing card, if any.</summary>
     public bool HasCurrentDice => _currentEntry is not null;
@@ -187,11 +191,15 @@ public sealed class MainViewModel : ObservableObject
         TimeLabel = $"{Format(t < plan.Length ? t : plan.Length)} / {Format(plan.Length)}";
 
         int slotIndex = plan.SlotAt(t);
-        if (slotIndex == _currentSlot) return;
-        _currentSlot = slotIndex;
-
         var slot = plan.Slots[slotIndex];
         var e    = slot.Entry;
+
+        // The score shows the 16 written bars; repeats map back onto them.
+        double into = (t - plan.MeasureLength * slotIndex) / plan.MeasureLength;
+        ScorePlayhead = e.Position - 1 + Math.Clamp(into, 0, 0.999);
+
+        if (slotIndex == _currentSlot) return;
+        _currentSlot = slotIndex;
         Highlight((e.Section == 'A' ? SectionA : SectionB)[(e.Position - 1) % WaltzRoll.HalfLength]);
 
         string pass = plan.Passes > 1 ? $" · pass {slot.Pass}" : "";
@@ -211,6 +219,7 @@ public sealed class MainViewModel : ObservableObject
     {
         Highlight(null);
         _currentSlot = -1;
+        ScorePlayhead = -1;
         Progress = 0;
         TimeLabel = "";
         NowPlayingTitle = "Ready";

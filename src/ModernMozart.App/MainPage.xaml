@@ -72,9 +72,9 @@
         </DataTemplate>
     </ContentPage.Resources>
 
-    <ScrollView>
-        <VerticalStackLayout Padding="16,24,16,32" Spacing="16">
-
+    <Grid RowDefinitions="Auto,*">
+        <!-- Pinned: title, now playing, transport — Stop stays reachable while the score scrolls -->
+        <VerticalStackLayout Padding="16,20,16,12" Spacing="12" BackgroundColor="{StaticResource Ink}">
             <!-- Title -->
             <VerticalStackLayout Spacing="2">
                 <Label Text="Musikalisches Würfelspiel" FontFamily="serif" FontSize="26"
@@ -115,6 +115,11 @@
                 <Button Grid.Column="2" Text="Share" Command="{Binding ShareMidiCommand}" />
             </Grid>
 
+        </VerticalStackLayout>
+
+        <ScrollView Grid.Row="1" x:Name="Scroller">
+        <VerticalStackLayout Padding="16,4,16,32" Spacing="16">
+
             <!-- The sixteen bars -->
             <Border Style="{StaticResource CardBorder}" Padding="12">
                 <VerticalStackLayout Spacing="8">
@@ -128,6 +133,15 @@
                                 BindableLayout.ItemTemplate="{StaticResource CellTemplate}" />
                     <Label Text="Tap a bar to re-throw the dice for that position."
                            Style="{StaticResource Caption}" HorizontalTextAlignment="Center" Margin="0,4,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- The score: Mozart's table numbers above each bar -->
+            <Border Style="{StaticResource CardBorder}" Padding="8,16,12,16">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="SCORE" Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                    <controls:ScoreView x:Name="Score" Measures="{Binding ScoreMeasures}" Playhead="{Binding ScorePlayhead}"
+                                Ink="{StaticResource Parchment}" Highlight="{StaticResource Gilt}" />
                 </VerticalStackLayout>
             </Border>
 
@@ -165,14 +179,7 @@
                 </VerticalStackLayout>
             </Border>
 
-            <!-- The score: Mozart's table numbers above each bar -->
-            <Border Style="{StaticResource CardBorder}" Padding="8,16,12,16">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="SCORE" Style="{StaticResource Caption}" Margin="8,0,0,0" />
-                    <controls:ScoreView Measures="{Binding ScoreMeasures}" Ink="{StaticResource Parchment}" />
-                </VerticalStackLayout>
-            </Border>
-
         </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+    </Grid>
 </ContentPage>

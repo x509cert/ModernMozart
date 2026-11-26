@@ -13,6 +13,18 @@ public sealed class ScoreView : GraphicsView, IDrawable
         nameof(Ink), typeof(Color), typeof(ScoreView), Colors.Black,
         propertyChanged: (b, _, _) => ((ScoreView)b).Invalidate());
 
+    /// <summary>
+    /// Playback position as bar index + fraction through the bar (e.g. 3.5 = halfway through the
+    /// fourth bar). Negative = not playing.
+    /// </summary>
+    public static readonly BindableProperty PlayheadProperty = BindableProperty.Create(
+        nameof(Playhead), typeof(double), typeof(ScoreView), -1.0,
+        propertyChanged: (b, _, _) => ((ScoreView)b).Invalidate());
+
+    public static readonly BindableProperty HighlightProperty = BindableProperty.Create(
+        nameof(Highlight), typeof(Color), typeof(ScoreView), Colors.Gold,
+        propertyChanged: (b, _, _) => ((ScoreView)b).Invalidate());
+
     private float _width;
 
     public ScoreView() => Drawable = this;
@@ -28,6 +40,24 @@ public sealed class ScoreView : GraphicsView, IDrawable
         get => (Color)GetValue(InkProperty);
         set => SetValue(InkProperty, value);
     }
+
+    public double Playhead
+    {
+        get => (double)GetValue(PlayheadProperty);
+        set => SetValue(PlayheadProperty, value);
+    }
+
+    public Color Highlight
+    {
+        get => (Color)GetValue(HighlightProperty);
+        set => SetValue(HighlightProperty, value);
+    }
+
+    /// <summary>Top of the line of music containing <paramref name="bar"/>, relative to this view.</summary>
+    public double SystemTop(int bar) => _width > 0 ? Engraver.Bar(bar, _width).SystemTop : 0;
+
+    /// <summary>Height of one line of music (grand staff with margins).</summary>
+    public double SystemHeight => _width > 0 ? ScoreEngraver.SystemHeight * Engraver.S : 0;
 
     protected override void OnSizeAllocated(double width, double height)
     {
@@ -47,7 +77,22 @@ public sealed class ScoreView : GraphicsView, IDrawable
     void IDrawable.Draw(ICanvas canvas, RectF dirtyRect)
     {
         if (Measures is not { Count: > 0 } m || _width <= 0) return;
-        Engraver.Draw(new MauiScoreCanvas(canvas, Ink), m, _width);
+        var engraver = Engraver;
+
+        // Current bar wash + playhead, under the notes.
+        if (Playhead >= 0 && (int)Playhead < m.Count)
+        {
+            var bar = engraver.Bar((int)Playhead, _width);
+            float pad = engraver.S;
+            canvas.FillColor = Highlight.WithAlpha(0.16f);
+            canvas.FillRoundedRectangle(bar.X, bar.StaffTop - pad, bar.Width, bar.StaffBottom - bar.StaffTop + 2 * pad, pad * 0.6f);
+            canvas.StrokeColor = Highlight;
+            canvas.StrokeSize  = Math.Max(1.5f, pad * 0.3f);
+            float x = bar.At(Playhead - (int)Playhead);
+            canvas.DrawLine(x, bar.StaffTop - pad, x, bar.StaffBottom + pad);
+        }
+
+        engraver.Draw(new MauiScoreCanvas(canvas, Ink), m, _width);
     }
 
     /// <summary>Adapts the engraver's primitives to Microsoft.Maui.Graphics.</summary>

@@ -9,7 +9,7 @@ pick sixteen pre-composed bars from Mozart's table, and hear a waltz nobody has 
 ## Features
 
 - 16-bar grid (parts A and B) with the dice shown as faces; tap any bar to re-throw just that position
-- The roll engraved as a piano score (grand staff, Bravura glyphs), Mozart's table numbers above each bar
+- The roll engraved as a piano score (grand staff, Bravura glyphs), Mozart's table numbers above each bar; during playback the current bar lights up, a playhead sweeps through it in time with the audio, and the page follows along
 - Live highlight of the bar you're **hearing** (driven by the audio device's playback head, not the renderer)
 - Tempo 60–200, repeats on/off (AABB)
 - Share the performance as a Standard MIDI File

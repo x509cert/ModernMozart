@@ -132,4 +132,34 @@ public class ScoreEngraverTests
         Assert.Equal(expected, e.BarsPerRow(width));
         Assert.True(e.Height(16, width) > 0);
     }
+
+    private sealed class HeadCapture : ModernMozart.Core.Notation.IScoreCanvas
+    {
+        public readonly List<(float X, float Y)> Heads = [];
+        public void Line(float x1, float y1, float x2, float y2, float t) { }
+        public void Glyph(ModernMozart.Core.Notation.Glyph g, float x, float y, float s)
+        { if (g == ModernMozart.Core.Notation.Glyph.NoteheadBlack) Heads.Add((x, y)); }
+        public void Beam(float x1, float y1, float x2, float y2, float t) { }
+        public void Text(string s, float x, float y, float size) { }
+    }
+
+    [Fact]
+    public void Playhead_at_bar_start_passes_through_first_notehead_centre()
+    {
+        var measures = DiceTable.Roll(new Random(3)).Measures.ToArray();
+        const float width = 330f;
+        var e = new ModernMozart.Core.Notation.ScoreEngraver(ModernMozart.Core.Notation.ScoreEngraver.StaffSpaceFor(width));
+        var cap = new HeadCapture();
+        e.Draw(cap, measures, width);
+
+        for (int i = 0; i < measures.Length; i++)
+        {
+            var bar = e.Bar(i, width);
+            float firstHead = cap.Heads
+                .Where(h => h.X >= bar.X && h.X < bar.X + bar.Width && h.Y >= bar.SystemTop
+                            && h.Y < bar.SystemTop + ModernMozart.Core.Notation.ScoreEngraver.SystemHeight * e.S)
+                .Min(h => h.X);
+            Assert.InRange(bar.At(0) - (firstHead + 0.59f * e.S), -0.01f, 0.01f);
+        }
+    }
 }
