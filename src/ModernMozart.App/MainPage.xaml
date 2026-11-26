@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:ModernMozart.App.ViewModels"
              xmlns:controls="clr-namespace:ModernMozart.App.Controls"
+             xmlns:audio="clr-namespace:ModernMozart.App.Audio"
              x:Class="ModernMozart.App.MainPage"
              x:DataType="vm:MainViewModel"
              Title="Mozart Dice Waltz">
@@ -178,9 +179,25 @@
             <Border Style="{StaticResource CardBorder}">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="PIANO" Style="{StaticResource Caption}" />
-                    <Label Text="{Binding EngineName}" FontFamily="serif" FontSize="18" />
+                    <!-- Dropdown of pianos: bundled SoundFonts, an imported one, and the built-in synth -->
+                    <Border BackgroundColor="{StaticResource Ink}" Stroke="{StaticResource CardEdge}" StrokeThickness="1"
+                            StrokeShape="RoundRectangle 12" Padding="12,0">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Picker x:Name="PianoPicker" Title="Choose a piano"
+                                    ItemsSource="{Binding PianoChoices}"
+                                    SelectedItem="{Binding SelectedPiano}"
+                                    ItemDisplayBinding="{Binding Name, x:DataType=audio:PianoChoice}"
+                                    IsEnabled="{Binding CanChangePiano}"
+                                    FontFamily="serif" FontSize="17" MinimumHeightRequest="48"
+                                    TextColor="{StaticResource Parchment}" TitleColor="{StaticResource Muted}"
+                                    BackgroundColor="Transparent"
+                                    SemanticProperties.Description="Piano sound" />
+                            <Label Grid.Column="1" Text="▾" FontSize="18" TextColor="{StaticResource Gilt}"
+                                   VerticalOptions="Center" InputTransparent="True" />
+                        </Grid>
+                    </Border>
                     <Label IsVisible="{Binding UsingBuiltInSynth}" Style="{StaticResource Caption}" CharacterSpacing="0"
-                           Text="For a real concert grand, load a piano SoundFont (.sf2). It is rendered on-device by MeltySynth." />
+                           Text="The built-in synth is basic. Choose a recorded piano above for the real sound." />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <Button Text="Load SoundFont…" Command="{Binding LoadSoundFontCommand}" />
                         <Button Grid.Column="1" Text="Remove" Command="{Binding RemoveSoundFontCommand}"

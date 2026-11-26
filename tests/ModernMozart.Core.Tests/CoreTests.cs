@@ -255,3 +255,57 @@ public class PlaybackClockTests
     }
 }
 
+public class SoundFontHeaderTests
+{
+    private static byte[] Riff(params (string id, byte[] data)[] info)
+    {
+        static byte[] Chunk(string id, byte[] body)
+        {
+            var b = new List<byte>(System.Text.Encoding.ASCII.GetBytes(id));
+            b.AddRange(BitConverter.GetBytes((uint)body.Length));
+            b.AddRange(body);
+            if (body.Length % 2 == 1) b.Add(0);
+            return [.. b];
+        }
+        var infoBody = new List<byte>(System.Text.Encoding.ASCII.GetBytes("INFO"));
+        foreach (var (id, data) in info) infoBody.AddRange(Chunk(id, data));
+        var sfbk = new List<byte>(System.Text.Encoding.ASCII.GetBytes("sfbk"));
+        sfbk.AddRange(Chunk("LIST", [.. infoBody]));
+        return Chunk("RIFF", [.. sfbk]);
+    }
+
+    private static byte[] Z(string s) => [.. System.Text.Encoding.ASCII.GetBytes(s), 0];
+
+    [Fact]
+    public void Reads_bank_name_after_other_info_chunks()
+        => Assert.Equal("Upright piano KW (small bright)",
+                        SoundFontHeader.ReadName(new MemoryStream(Riff(("ifil", [2, 0, 1, 0]), ("isng", Z("EMU8000")), ("INAM", Z("Upright piano KW (small bright)"))))));
+
+    [Fact]
+    public void Handles_odd_length_padding()
+        => Assert.Equal("Odd", SoundFontHeader.ReadName(new MemoryStream(Riff(("isng", Z("EMU")), ("INAM", Z("Odd"))))));
+
+    [Fact]
+    public void Returns_null_for_non_soundfonts()
+    {
+        Assert.Null(SoundFontHeader.ReadName(new MemoryStream("not a soundfont at all"u8.ToArray())));
+        Assert.Null(SoundFontHeader.ReadName(new MemoryStream([])));
+        Assert.Null(SoundFontHeader.ReadName(new MemoryStream(Riff(("ifil", [2, 0, 1, 0])))));
+    }
+
+    [Fact]
+    public void Reads_the_bundled_piano_if_present()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "src"))) dir = dir.Parent;
+        var raw = dir is null ? null : Path.Combine(dir.FullName, "src", "ModernMozart.App", "Resources", "Raw");
+        if (raw is null || !Directory.Exists(raw)) return;
+
+        foreach (var sf2 in Directory.EnumerateFiles(raw, "*.sf2"))
+        {
+            using var f = File.OpenRead(sf2);
+            Assert.False(string.IsNullOrWhiteSpace(SoundFontHeader.ReadName(f)), sf2);
+        }
+    }
+}
+

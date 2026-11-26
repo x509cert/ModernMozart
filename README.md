@@ -20,8 +20,8 @@ pick sixteen pre-composed bars from Mozart's table, and hear a waltz nobody has 
 
 | Engine | Quality | Setup |
 |---|---|---|
-| **SoundFont** — [MeltySynth](https://github.com/sinshu/meltysynth) renders on-device → 32-bit float `AudioTrack` | As good as the `.sf2` | **Default:** the bundled *Upright Piano KW* ([FreePats](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html), CC0). Replace `Resources/Raw/*.sf2`, or tap **Load SoundFont…** in the app |
-| **Built-in** — Android's Sonivox EAS GM synth via `MediaPlayer` | Dated, but works everywhere | Fallback only if no SoundFont loads |
+| **SoundFont** — [MeltySynth](https://github.com/sinshu/meltysynth) renders on-device → 32-bit float `AudioTrack` | As good as the `.sf2` | Every `.sf2` in `Resources/Raw` is bundled and listed in the app's **piano dropdown** (default: *Upright Piano KW*, [FreePats](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html), CC0). **Load SoundFont…** adds your own |
+| **Built-in** — Android's Sonivox EAS GM synth via `MediaPlayer` | Dated, but works everywhere | Last entry in the dropdown; also the fallback if a SoundFont won't load |
 
 For the most authentic sound, use a sampled grand. Mobile-friendly sizes (≈20–150 MB) load fastest;
 the whole SoundFont is held in memory.

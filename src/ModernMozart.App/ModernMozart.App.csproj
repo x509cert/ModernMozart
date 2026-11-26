@@ -28,9 +28,8 @@
     <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0F1626" />
     <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F1626" BaseSize="128,128" />
     <MauiAsset Include="Resources\Raw\**" Exclude="Resources\Raw\*.md;Resources\Raw\*.sf2" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
-    <!-- The default piano: whatever single .sf2 is in Resources/Raw, packaged under one fixed,
-         lowercase name (Android asset names are case-sensitive). -->
-    <MauiAsset Include="Resources\Raw\*.sf2" LogicalName="piano.sf2" />
+    <!-- Pianos: every .sf2 in Resources/Raw appears in the app's piano dropdown. -->
+    <MauiAsset Include="Resources\Raw\*.sf2" LogicalName="soundfonts/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

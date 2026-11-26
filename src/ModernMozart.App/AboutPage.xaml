@@ -31,7 +31,7 @@
                 <Label Style="{StaticResource Body}"
                        Text="Roll the dice and the app composes a sixteen-bar waltz from Mozart's table, plays it on a piano, and shows it as a score while it plays. Tap any bar to re-throw the dice for just that bar. Share sends the waltz as a MIDI file." />
                 <Label Style="{StaticResource Body}"
-                       Text="The piano is synthesised on the phone, sample by sample, from a SoundFont (.sf2): recordings of a real piano, note by note. The app comes with a Kawai upright; Load SoundFont… lets you use any other, and Remove goes back to the upright." />
+                       Text="The piano is synthesised on the phone, sample by sample, from a SoundFont (.sf2): recordings of a real piano, note by note. Pick a piano from the dropdown: the app comes with a Kawai upright, and Load SoundFont… adds any other. Android's basic built-in synthesiser is there too." />
 
                 <!-- The game -->
                 <Label Text="The dice game" Style="{StaticResource Heading}" />

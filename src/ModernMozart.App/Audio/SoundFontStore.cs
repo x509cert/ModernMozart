@@ -1,64 +1,112 @@
 using MeltySynth;
+using ModernMozart.Core;
 
 namespace ModernMozart.App.Audio;
 
-public sealed record LoadedSoundFont(SoundFont SoundFont, string Name, bool IsImported);
+public enum PianoSource { Bundled, Imported, BuiltIn }
+
+/// <summary>One entry in the piano dropdown.</summary>
+/// <param name="Id">Stable key saved in preferences.</param>
+/// <param name="Asset">Bundled asset file name (Bundled only).</param>
+public sealed record PianoChoice(string Id, string Name, PianoSource Source, string? Asset = null)
+{
+    public override string ToString() => Name;   // Picker fallback display
+}
 
 /// <summary>
-/// Finds a SoundFont for the piano, in priority order:
-///   1. one the user imported (stored in app data, survives restarts)
-///   2. the default bundled with the app (the .sf2 in Resources/Raw, packaged as piano.sf2)
-/// MeltySynth needs a seekable stream, so everything is loaded from a real file.
+/// The pianos the app can play with:
+///   • every SoundFont bundled in Resources/Raw (packaged under assets/soundfonts/)
+///   • one the user imported (stored in app data, survives restarts)
+///   • Android's built-in synth, always last
+/// and which one the user picked. MeltySynth needs a seekable file, so bundled
+/// SoundFonts are copied out of the APK (once per app build) before loading.
 /// </summary>
 public sealed class SoundFontStore
 {
-    private const string BundledAsset = "piano.sf2";
+    private const string AssetFolder  = "soundfonts";
+    private const string DefaultAsset = "Piano.sf2";
+    private const string SelectedKey  = "piano.selected";
     private const string NameKey      = "soundfont.name";
+    private const string ImportedId   = "imported";
+
+    public static readonly PianoChoice BuiltIn = new("builtin", "Android built-in synth", PianoSource.BuiltIn);
 
     private static string ImportedPath => Path.Combine(FileSystem.AppDataDirectory, "imported.sf2");
 
-    // MeltySynth needs a seekable file, so the bundled asset is copied out once per app build
-    // (a new build may bundle a different SoundFont).
-    private static string BundledCache =>
-        Path.Combine(FileSystem.CacheDirectory, $"bundled-{AppInfo.Current.BuildString}.sf2");
+    private static string CachePath(string asset) =>
+        Path.Combine(FileSystem.CacheDirectory, $"bundled-{AppInfo.Current.BuildString}-{asset}");
 
-    public async Task<LoadedSoundFont?> LoadAsync()
+    // ── Choices ───────────────────────────────────────────────────────────
+    public async Task<IReadOnlyList<PianoChoice>> ListAsync()
     {
-        if (File.Exists(ImportedPath))
+        var choices = new List<PianoChoice>();
+
+        foreach (string asset in BundledAssets().Order(StringComparer.OrdinalIgnoreCase))
         {
+            string? name = null;
             try
             {
-                return await Task.Run(() => Load(ImportedPath, Preferences.Default.Get(NameKey, "Imported"), isImported: true));
+                await using var s = await FileSystem.OpenAppPackageFileAsync($"{AssetFolder}/{asset}");
+                name = SoundFontHeader.ReadName(s);
             }
-            catch (Exception) { File.Delete(ImportedPath); }   // corrupt — forget it
+            catch (Exception ex) { Console.WriteLine($"ModernMozart: can't read {asset}: {ex.Message}"); }
+            choices.Add(new($"bundled:{asset}", name ?? Path.GetFileNameWithoutExtension(asset), PianoSource.Bundled, asset));
         }
 
-        try
-        {
-            if (!File.Exists(BundledCache))
-            {
-                foreach (var stale in Directory.EnumerateFiles(FileSystem.CacheDirectory, "bundled-*.sf2"))
-                    File.Delete(stale);
+        if (File.Exists(ImportedPath))
+            choices.Add(new(ImportedId, Preferences.Default.Get(NameKey, "Imported SoundFont"), PianoSource.Imported));
 
-                string tmp = BundledCache + ".tmp";
-                await using (var src = await FileSystem.OpenAppPackageFileAsync(BundledAsset))
-                await using (var dst = File.Create(tmp))
-                    await src.CopyToAsync(dst);
-                File.Move(tmp, BundledCache, overwrite: true);
-            }
-            var bundled = await Task.Run(() => Load(BundledCache, "Bundled piano", isImported: false));
-            Console.WriteLine($"ModernMozart: SoundFont loaded (bundled): {bundled.Name}");
-            return bundled;
-        }
-        catch (Exception ex)
+        choices.Add(BuiltIn);
+        Console.WriteLine($"ModernMozart: pianos: {string.Join(" | ", choices.Select(c => c.Name))}");
+        return choices;
+    }
+
+    /// <summary>The saved choice if still available; otherwise the default bundled piano.</summary>
+    public PianoChoice Preferred(IReadOnlyList<PianoChoice> choices)
+    {
+        string saved = Preferences.Default.Get(SelectedKey, "");
+        return choices.FirstOrDefault(c => c.Id == saved)
+            ?? choices.FirstOrDefault(c => c.Asset is { } a && a.Equals(DefaultAsset, StringComparison.OrdinalIgnoreCase))
+            ?? choices.FirstOrDefault(c => c.Source == PianoSource.Bundled)
+            ?? BuiltIn;
+    }
+
+    public void Remember(PianoChoice choice) => Preferences.Default.Set(SelectedKey, choice.Id);
+
+    // ── Loading ───────────────────────────────────────────────────────────
+    /// <summary>Loads the choice's SoundFont; null for the built-in synth.</summary>
+    public async Task<SoundFont?> LoadAsync(PianoChoice choice)
+    {
+        switch (choice.Source)
         {
-            Console.WriteLine($"ModernMozart: no bundled SoundFont ({ex.GetType().Name}); using built-in synth");
-            return null;
+            case PianoSource.Imported:
+                return await Task.Run(() => new SoundFont(ImportedPath));
+
+            case PianoSource.Bundled:
+                string asset = choice.Asset!, path = CachePath(asset);
+                if (!File.Exists(path))
+                {
+                    foreach (var stale in Directory.EnumerateFiles(FileSystem.CacheDirectory, $"bundled-*-{asset}"))
+                        File.Delete(stale);
+
+                    string tmp = path + ".tmp";
+                    await using (var src = await FileSystem.OpenAppPackageFileAsync($"{AssetFolder}/{asset}"))
+                    await using (var dst = File.Create(tmp))
+                        await src.CopyToAsync(dst);
+                    File.Move(tmp, path, overwrite: true);
+                }
+                var sf = await Task.Run(() => new SoundFont(path));
+                Console.WriteLine($"ModernMozart: SoundFont loaded (bundled): {choice.Name}");
+                return sf;
+
+            default:
+                return null;
         }
     }
 
-    /// <summary>Shows the system file picker. Returns null if the user cancels.</summary>
-    public async Task<LoadedSoundFont?> ImportAsync()
+    // ── Import / remove ───────────────────────────────────────────────────
+    /// <summary>Shows the system file picker and keeps a copy. Returns null if the user cancels.</summary>
+    public async Task<PianoChoice?> ImportAsync()
     {
         var picked = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Choose a SoundFont (.sf2)" });
         if (picked is null) return null;
@@ -70,12 +118,14 @@ public sealed class SoundFontStore
             await using (var dst = File.Create(tmp))
                 await src.CopyToAsync(dst);
 
-            string fallback = Path.GetFileNameWithoutExtension(picked.FileName);
-            var loaded = await Task.Run(() => Load(tmp, fallback, isImported: true));   // parse = validate
+            var sf = await Task.Run(() => new SoundFont(tmp));                // parse = validate
+            string name = string.IsNullOrWhiteSpace(sf.Info.BankName)
+                ? Path.GetFileNameWithoutExtension(picked.FileName)
+                : sf.Info.BankName.Trim();
 
             File.Move(tmp, ImportedPath, overwrite: true);
-            Preferences.Default.Set(NameKey, loaded.Name);
-            return loaded;
+            Preferences.Default.Set(NameKey, name);
+            return new(ImportedId, name, PianoSource.Imported);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -90,10 +140,14 @@ public sealed class SoundFontStore
         Preferences.Default.Remove(NameKey);
     }
 
-    private static LoadedSoundFont Load(string path, string fallbackName, bool isImported)
+    // ── Bundled assets ────────────────────────────────────────────────────
+    private static IEnumerable<string> BundledAssets()
     {
-        var sf   = new SoundFont(path);   // loads all samples into memory
-        var name = string.IsNullOrWhiteSpace(sf.Info.BankName) ? fallbackName : sf.Info.BankName.Trim();
-        return new(sf, name, isImported);
+#if ANDROID
+        return (Android.App.Application.Context.Assets?.List(AssetFolder) ?? [])
+            .Where(f => f.EndsWith(".sf2", StringComparison.OrdinalIgnoreCase));
+#else
+        return [];
+#endif
     }
 }

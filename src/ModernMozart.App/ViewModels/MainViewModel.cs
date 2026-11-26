@@ -15,7 +15,8 @@ public sealed class MainViewModel : ObservableObject
     private bool _observeRepeats = true;
     private bool _isPlaying, _isBusy, _initialized;
     private IWaltzPlayer _player = new SystemSynthPlayer();
-    private bool _hasImportedSoundFont;
+    private PianoChoice? _selectedPiano;
+    private bool _suppressPianoSelection;
     private CancellationTokenSource? _playCts;
     private PerformancePlan? _plan;
     private int  _currentSlot = -1;
@@ -87,9 +88,26 @@ public sealed class MainViewModel : ObservableObject
     public bool   IsIdle         => !_isPlaying;
     public string PlayButtonText => _isPlaying ? "■  Stop" : "▶  Play";
 
-    public string EngineName           => _player.Name;
-    public bool   HasImportedSoundFont => _hasImportedSoundFont;
-    public bool   UsingBuiltInSynth    => _player is SystemSynthPlayer;
+    /// <summary>Bundled pianos, an imported one if any, and the built-in synth.</summary>
+    public ObservableCollection<PianoChoice> PianoChoices { get; } = [];
+
+    /// <summary>Bound two-way to the dropdown; picking one loads it.</summary>
+    public PianoChoice? SelectedPiano
+    {
+        get => _selectedPiano;
+        set
+        {
+            if (_suppressPianoSelection || value is null || Equals(value, _selectedPiano)) return;
+            var previous = _selectedPiano;
+            _selectedPiano = value;
+            Raise(nameof(SelectedPiano));
+            _ = SwitchPianoAsync(value, previous);
+        }
+    }
+
+    public bool CanChangePiano       => !_isPlaying && !_isBusy;
+    public bool HasImportedSoundFont => PianoChoices.Any(c => c.Source == PianoSource.Imported);
+    public bool UsingBuiltInSynth    => _player is SystemSynthPlayer;
 
     public string NowPlayingTitle  { get => _nowPlayingTitle;  private set => Set(ref _nowPlayingTitle, value); }
     public string NowPlayingDetail { get => _nowPlayingDetail; private set => Set(ref _nowPlayingDetail, value); }
@@ -130,8 +148,10 @@ public sealed class MainViewModel : ObservableObject
         await RunBusyAsync(async () =>
         {
             NowPlayingDetail = "Loading piano…";
-            UseSoundFont(await _soundFonts.LoadAsync());
-            NowPlayingDetail = "Tap Play — or tap any bar to re-throw it.";
+            await ReloadPianoChoicesAsync();
+            if (!await ApplyPianoAsync(_soundFonts.Preferred(PianoChoices)))
+                await ApplyPianoAsync(SoundFontStore.BuiltIn);
+            NowPlayingDetail = IdleHint;
         });
     }
 
@@ -242,7 +262,7 @@ public sealed class MainViewModel : ObservableObject
         TimeLabel = "";
         NowPlayingTitle = "Ready";
         ShowDice(null);
-        NowPlayingDetail = "Tap Play — or tap any bar to re-throw it.";
+        NowPlayingDetail = IdleHint;
     }
 
     // ── Export ────────────────────────────────────────────────────────────
@@ -262,30 +282,80 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex) { await Alert("Couldn't share", ex.Message); }
     }
 
-    // ── SoundFonts ────────────────────────────────────────────────────────
+    // ── Pianos ────────────────────────────────────────────────────────────
+    private const string IdleHint = "Tap Play — or tap any bar to re-throw it.";
+
+    private Task SwitchPianoAsync(PianoChoice choice, PianoChoice? previous) => RunBusyAsync(async () =>
+    {
+        NowPlayingDetail = $"Loading {choice.Name}…";
+        if (!await ApplyPianoAsync(choice))
+        {
+            if (previous is not null) ShowSelectedPiano(previous);
+            await Alert("Piano", $"Couldn't load “{choice.Name}”.");
+        }
+        NowPlayingDetail = IdleHint;
+    });
+
     private Task ImportSoundFontAsync() => RunBusyAsync(async () =>
     {
         try
         {
             NowPlayingDetail = "Loading SoundFont…";
-            var loaded = await _soundFonts.ImportAsync();
-            if (loaded is not null) UseSoundFont(loaded);
+            var imported = await _soundFonts.ImportAsync();
+            if (imported is null) return;
+            await ReloadPianoChoicesAsync();
+            if (!await ApplyPianoAsync(imported)) await Alert("SoundFont", $"Couldn't load “{imported.Name}”.");
         }
         catch (Exception ex) { await Alert("SoundFont", ex.Message); }
-        finally { NowPlayingDetail = "Tap Play — or tap any bar to re-throw it."; }
+        finally { NowPlayingDetail = IdleHint; }
     });
 
     private Task RemoveSoundFontAsync() => RunBusyAsync(async () =>
     {
+        bool wasSelected = _selectedPiano?.Source == PianoSource.Imported;
         _soundFonts.RemoveImported();
-        UseSoundFont(await _soundFonts.LoadAsync());   // falls back to bundled, then built-in
+        await ReloadPianoChoicesAsync();
+        if (wasSelected && !await ApplyPianoAsync(_soundFonts.Preferred(PianoChoices)))
+            await ApplyPianoAsync(SoundFontStore.BuiltIn);
     });
 
-    private void UseSoundFont(LoadedSoundFont? sf)
+    /// <summary>Loads a piano and makes it current. False (and nothing changes) if it can't be loaded.</summary>
+    private async Task<bool> ApplyPianoAsync(PianoChoice choice)
     {
-        _player = sf is null ? new SystemSynthPlayer() : new SoundFontPlayer(sf.SoundFont, sf.Name);
-        _hasImportedSoundFont = sf?.IsImported == true;
-        Raise(nameof(EngineName), nameof(HasImportedSoundFont), nameof(UsingBuiltInSynth));
+        try
+        {
+            var sf = await _soundFonts.LoadAsync(choice);
+            _player = sf is null ? new SystemSynthPlayer() : new SoundFontPlayer(sf, choice.Name);
+            _soundFonts.Remember(choice);
+            ShowSelectedPiano(choice);
+            Raise(nameof(UsingBuiltInSynth));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ModernMozart: couldn't load piano {choice.Name}: {ex.Message}");
+            return false;
+        }
+    }
+
+    private async Task ReloadPianoChoicesAsync()
+    {
+        var choices = await _soundFonts.ListAsync();
+        _suppressPianoSelection = true;      // the dropdown clears its selection while items change
+        try
+        {
+            PianoChoices.Clear();
+            foreach (var c in choices) PianoChoices.Add(c);
+        }
+        finally { _suppressPianoSelection = false; }
+        Raise(nameof(SelectedPiano), nameof(HasImportedSoundFont));
+    }
+
+    /// <summary>Updates the dropdown without triggering a load.</summary>
+    private void ShowSelectedPiano(PianoChoice choice)
+    {
+        _selectedPiano = choice;
+        Raise(nameof(SelectedPiano));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
@@ -300,6 +370,7 @@ public sealed class MainViewModel : ObservableObject
     {
         foreach (var c in (Command[])[_rollCommand, _playCommand, _rerollCommand, _shareCommand, _loadSfCommand, _removeSfCommand])
             c.ChangeCanExecute();
+        Raise(nameof(CanChangePiano));
     }
 
     private static Task Alert(string title, string message)

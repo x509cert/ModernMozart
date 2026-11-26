@@ -11,9 +11,9 @@ with Reserved Font Name "Bravura".
 Licensed under the SIL Open Font License, Version 1.1 — https://openfontlicense.org.
 The outlines are embedded as vector path data; the font itself is not redistributed.
 
-## Upright Piano KW (default piano)
+## Upright Piano KW (bundled pianos)
 
-`src/ModernMozart.App/Resources/Raw/Piano.sf2` — *Upright Piano KW* (small bank, 2019-07-03), recorded by
+The SoundFonts in `src/ModernMozart.App/Resources/Raw/` — *Upright Piano KW* (small banks, 2019-07-03), recorded by
 Gonzalo and Roberto, published by [FreePats](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html)
 under the [Creative Commons CC0 1.0](http://creativecommons.org/publicdomain/zero/1.0/) public domain dedication.
 
