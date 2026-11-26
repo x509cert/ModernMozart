@@ -90,8 +90,6 @@ jobs:
             sleep 10
             adb logcat -d | grep -E "FATAL EXCEPTION|E AndroidRuntime|MediaPlayer.*error" | head -60 || true
             adb shell pidof com.x509cert.modernmozart || (echo "::error::App died after pressing Play" && exit 1)
-            adb shell uiautomator dump /sdcard/ui2.xml && adb pull /sdcard/ui2.xml ui2.xml
-            grep -o 'text="[^"]*"' ui2.xml | head -12
       - uses: actions/upload-artifact@v5
         if: always()
         with:
