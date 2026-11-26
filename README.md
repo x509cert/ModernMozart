@@ -8,7 +8,8 @@ pick sixteen pre-composed bars from Mozart's table, and hear a waltz nobody has 
 
 ## Features
 
-- 16-bar grid (parts A and B); tap any bar to re-throw just that position
+- 16-bar grid (parts A and B) with the dice shown as faces; tap any bar to re-throw just that position
+- The roll engraved as a piano score (grand staff, Bravura glyphs), Mozart's table numbers above each bar
 - Live highlight of the bar you're **hearing** (driven by the audio device's playback head, not the renderer)
 - Tempo 60–200, repeats on/off (AABB)
 - Share the performance as a Standard MIDI File
@@ -26,7 +27,8 @@ the whole SoundFont is held in memory.
 
 ```
 src/ModernMozart.Core     platform-neutral: dice table, 176 measures, performance plan,
-                          MIDI writer, sample-accurate SoundFont renderer
+                          MIDI writer, sample-accurate SoundFont renderer,
+                          Notation/ score engraver (draws through a 4-method canvas interface)
 src/ModernMozart.App      .NET MAUI Android app (MVVM, compiled bindings)
 tests/ModernMozart.Core.Tests
 ```

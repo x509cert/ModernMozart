@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:ModernMozart.App.ViewModels"
+             xmlns:controls="clr-namespace:ModernMozart.App.Controls"
              x:Class="ModernMozart.App.MainPage"
              x:DataType="vm:MainViewModel"
              Title="Mozart Dice Waltz">
@@ -13,7 +14,7 @@
                     FlexLayout.Basis="25%"
                     Margin="4"
                     Padding="4,8"
-                    HeightRequest="78"
+                    HeightRequest="86"
                     BackgroundColor="{StaticResource Ink}"
                     Stroke="{StaticResource CardEdge}"
                     StrokeThickness="1"
@@ -46,14 +47,26 @@
                             </DataTrigger>
                         </Label.Triggers>
                     </Label>
-                    <Label Text="{Binding Dice}" Style="{StaticResource Caption}" FontSize="11"
-                           HorizontalTextAlignment="Center">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding IsCurrent}" Value="True">
-                                <Setter Property="TextColor" Value="{StaticResource Ink}" />
-                            </DataTrigger>
-                        </Label.Triggers>
-                    </Label>
+                    <HorizontalStackLayout Spacing="3" HorizontalOptions="Center" Margin="0,3,0,0">
+                        <controls:DieView Value="{Binding Die1}" WidthRequest="16" HeightRequest="16"
+                                          FaceColor="{StaticResource Parchment}" PipColor="{StaticResource Ink}">
+                            <controls:DieView.Triggers>
+                                <DataTrigger TargetType="controls:DieView" Binding="{Binding IsCurrent}" Value="True">
+                                    <Setter Property="FaceColor" Value="{StaticResource Ink}" />
+                                    <Setter Property="PipColor" Value="{StaticResource Gilt}" />
+                                </DataTrigger>
+                            </controls:DieView.Triggers>
+                        </controls:DieView>
+                        <controls:DieView Value="{Binding Die2}" WidthRequest="16" HeightRequest="16"
+                                          FaceColor="{StaticResource Parchment}" PipColor="{StaticResource Ink}">
+                            <controls:DieView.Triggers>
+                                <DataTrigger TargetType="controls:DieView" Binding="{Binding IsCurrent}" Value="True">
+                                    <Setter Property="FaceColor" Value="{StaticResource Ink}" />
+                                    <Setter Property="PipColor" Value="{StaticResource Gilt}" />
+                                </DataTrigger>
+                            </controls:DieView.Triggers>
+                        </controls:DieView>
+                    </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>
         </DataTemplate>
@@ -66,13 +79,24 @@
             <VerticalStackLayout Spacing="2">
                 <Label Text="Musikalisches Würfelspiel" FontFamily="serif" FontSize="26"
                        TextColor="{StaticResource Gilt}" />
+                <Label Text="Musical Dice Game" FontFamily="serif" FontAttributes="Italic" FontSize="17"
+                       TextColor="{StaticResource Parchment}" Margin="0,0,0,4" />
                 <Label Text="W. A. MOZART  ·  K. 516f  ·  1787" Style="{StaticResource Caption}" />
             </VerticalStackLayout>
 
             <!-- Now playing -->
             <Border Style="{StaticResource CardBorder}">
                 <VerticalStackLayout Spacing="6">
-                    <Label Text="{Binding NowPlayingTitle}" FontFamily="serif" FontSize="30" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="{Binding NowPlayingTitle}" FontFamily="serif" FontSize="30" VerticalOptions="Center" />
+                        <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center"
+                                               IsVisible="{Binding HasCurrentDice}">
+                            <controls:DieView Value="{Binding CurrentDie1}" WidthRequest="30" HeightRequest="30"
+                                              FaceColor="{StaticResource Parchment}" PipColor="{StaticResource Ink}" />
+                            <controls:DieView Value="{Binding CurrentDie2}" WidthRequest="30" HeightRequest="30"
+                                              FaceColor="{StaticResource Parchment}" PipColor="{StaticResource Ink}" />
+                        </HorizontalStackLayout>
+                    </Grid>
                     <Label Text="{Binding NowPlayingDetail}" TextColor="{StaticResource Muted}" FontSize="13" />
                     <ProgressBar Progress="{Binding Progress}" Margin="0,8,0,0" />
                     <Grid ColumnDefinitions="*,Auto">
@@ -94,10 +118,7 @@
             <!-- The sixteen bars -->
             <Border Style="{StaticResource CardBorder}" Padding="12">
                 <VerticalStackLayout Spacing="8">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Text="PART A  ·  BARS 1–8" Style="{StaticResource Caption}" />
-                        <Label Grid.Column="1" Text="{Binding SeedLabel}" Style="{StaticResource Caption}" />
-                    </Grid>
+                    <Label Text="PART A  ·  BARS 1–8" Style="{StaticResource Caption}" />
                     <FlexLayout Wrap="Wrap" JustifyContent="Start"
                                 BindableLayout.ItemsSource="{Binding SectionA}"
                                 BindableLayout.ItemTemplate="{StaticResource CellTemplate}" />
@@ -141,6 +162,14 @@
                         <Button Grid.Column="1" Text="Remove" Command="{Binding RemoveSoundFontCommand}"
                                 IsVisible="{Binding HasImportedSoundFont}" />
                     </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- The score: Mozart's table numbers above each bar -->
+            <Border Style="{StaticResource CardBorder}" Padding="8,16,12,16">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="SCORE" Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                    <controls:ScoreView Measures="{Binding ScoreMeasures}" Ink="{StaticResource Parchment}" />
                 </VerticalStackLayout>
             </Border>
 

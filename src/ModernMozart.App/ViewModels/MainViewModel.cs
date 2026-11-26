@@ -10,8 +10,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly SoundFontStore _soundFonts;
     private readonly Command _rollCommand, _playCommand, _rerollCommand, _shareCommand, _loadSfCommand, _removeSfCommand;
 
-    private WaltzRoll _roll;
-    private int  _seed;
+    private WaltzRoll _roll = DiceTable.Roll(Random.Shared);
     private int  _tempo = 138;
     private bool _observeRepeats = true;
     private bool _isPlaying, _isBusy, _initialized;
@@ -23,6 +22,7 @@ public sealed class MainViewModel : ObservableObject
     private MeasureCell? _currentCell;
     private string _nowPlayingTitle = "Ready", _nowPlayingDetail = "Tap Play — or tap any bar to re-throw it.";
     private string _timeLabel = "";
+    private RollEntry? _currentEntry;
     private double _progress;
 
     public MainViewModel(SoundFontStore soundFonts)
@@ -36,7 +36,7 @@ public sealed class MainViewModel : ObservableObject
         _loadSfCommand   = new Command(async () => await ImportSoundFontAsync(), () => !_isPlaying && !_isBusy);
         _removeSfCommand = new Command(async () => await RemoveSoundFontAsync(), () => !_isPlaying && !_isBusy);
 
-        _roll = Roll(NewSeed());
+        Rebuild();
     }
 
     // ── Bindable state ────────────────────────────────────────────────────
@@ -50,7 +50,8 @@ public sealed class MainViewModel : ObservableObject
     public ICommand LoadSoundFontCommand => _loadSfCommand;
     public ICommand RemoveSoundFontCommand => _removeSfCommand;
 
-    public string SeedLabel => $"Seed {_seed}";
+    /// <summary>The sixteen measure numbers, for the score. A new array whenever the roll changes.</summary>
+    public IReadOnlyList<int> ScoreMeasures => [.. _roll.Measures];
 
     public int Tempo
     {
@@ -95,6 +96,17 @@ public sealed class MainViewModel : ObservableObject
     public string TimeLabel        { get => _timeLabel;        private set => Set(ref _timeLabel, value); }
     public double Progress         { get => _progress;         private set => Set(ref _progress, value); }
 
+    /// <summary>The throw behind the bar being shown in the now-playing card, if any.</summary>
+    public bool HasCurrentDice => _currentEntry is not null;
+    public int  CurrentDie1    => _currentEntry?.Die1 ?? 1;
+    public int  CurrentDie2    => _currentEntry?.Die2 ?? 1;
+
+    private void ShowDice(RollEntry? entry)
+    {
+        _currentEntry = entry;
+        Raise(nameof(HasCurrentDice), nameof(CurrentDie1), nameof(CurrentDie2));
+    }
+
     private int Passes => _observeRepeats ? 2 : 1;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────
@@ -111,14 +123,10 @@ public sealed class MainViewModel : ObservableObject
     }
 
     // ── Dice ──────────────────────────────────────────────────────────────
-    private void NewRoll() => _roll = Roll(NewSeed());
-
-    private WaltzRoll Roll(int seed)
+    private void NewRoll()
     {
-        _seed = seed;
-        var roll = DiceTable.Roll(new Random(seed));
-        Rebuild(roll);
-        return roll;
+        _roll = DiceTable.Roll(Random.Shared);
+        Rebuild();
     }
 
     private void Reroll(MeasureCell? cell)
@@ -126,21 +134,20 @@ public sealed class MainViewModel : ObservableObject
         if (cell is null || _isPlaying) return;
         _roll = _roll.Reroll(cell.Position, Random.Shared);
         cell.Entry = _roll.Entries[cell.Position - 1];
-        Raise(nameof(LengthLabel));
+        Raise(nameof(ScoreMeasures));
         NowPlayingTitle  = $"Bar {cell.Measure}";
-        NowPlayingDetail = $"Position {cell.Position} re-thrown: {cell.Dice} = {cell.Entry.Sum}";
+        NowPlayingDetail = $"Position {cell.Position} re-thrown — rolled {cell.Entry.Sum}";
+        ShowDice(cell.Entry);
     }
 
-    private void Rebuild(WaltzRoll roll)
+    private void Rebuild()
     {
         SectionA.Clear(); SectionB.Clear();
-        foreach (var e in roll.Entries)
+        foreach (var e in _roll.Entries)
             (e.Section == 'A' ? SectionA : SectionB).Add(new MeasureCell(e));
-        Raise(nameof(SeedLabel), nameof(LengthLabel));
+        Raise(nameof(ScoreMeasures), nameof(LengthLabel));
         ResetNowPlaying();
     }
-
-    private static int NewSeed() => Random.Shared.Next(1, 1_000_000);
 
     // ── Playback ──────────────────────────────────────────────────────────
     private async Task TogglePlayAsync()
@@ -189,7 +196,8 @@ public sealed class MainViewModel : ObservableObject
 
         string pass = plan.Passes > 1 ? $" · pass {slot.Pass}" : "";
         NowPlayingTitle  = $"Bar {e.Measure}";
-        NowPlayingDetail = $"Section {e.Section}{pass} · position {e.Position} · 🎲 {e.Die1}+{e.Die2} = {e.Sum}";
+        NowPlayingDetail = $"Section {e.Section}{pass} · position {e.Position} · rolled {e.Sum}";
+        ShowDice(e);
     }
 
     private void Highlight(MeasureCell? cell)
@@ -206,6 +214,7 @@ public sealed class MainViewModel : ObservableObject
         Progress = 0;
         TimeLabel = "";
         NowPlayingTitle = "Ready";
+        ShowDice(null);
         NowPlayingDetail = "Tap Play — or tap any bar to re-throw it.";
     }
 
@@ -215,7 +224,7 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var plan = PerformancePlan.Create(_roll, _tempo, Passes);
-            string path = Path.Combine(FileSystem.CacheDirectory, $"mozart-waltz-{_seed}.mid");
+            string path = Path.Combine(FileSystem.CacheDirectory, $"mozart-waltz-{DateTime.Now:yyyyMMdd-HHmmss}.mid");
             await File.WriteAllBytesAsync(path, MidiFileWriter.Build(plan));
             await Share.Default.RequestAsync(new ShareFileRequest
             {

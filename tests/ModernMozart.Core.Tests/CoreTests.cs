@@ -93,3 +93,43 @@ public class MidiFileWriterTests
         Assert.InRange(midi.Length.TotalSeconds, plan.Length.TotalSeconds - 0.05, plan.Length.TotalSeconds + 0.05);
     }
 }
+
+public class ScoreEngraverTests
+{
+    private sealed class CountingCanvas : ModernMozart.Core.Notation.IScoreCanvas
+    {
+        public int Heads, Lines, Beams, Texts;
+        public void Line(float x1, float y1, float x2, float y2, float t) => Lines++;
+        public void Glyph(ModernMozart.Core.Notation.Glyph g, float x, float y, float s)
+        {
+            Assert.True(float.IsFinite(x) && float.IsFinite(y));
+            if (g is ModernMozart.Core.Notation.Glyph.NoteheadBlack or ModernMozart.Core.Notation.Glyph.NoteheadHalf) Heads++;
+        }
+        public void Beam(float x1, float y1, float x2, float y2, float t) => Beams++;
+        public void Text(string s, float x, float y, float size) => Texts++;
+    }
+
+    [Fact]
+    public void Every_measure_engraves_one_head_per_note()
+    {
+        var all = Enumerable.Range(1, 176).ToArray();
+        var canvas = new CountingCanvas();
+        var engraver = new ModernMozart.Core.Notation.ScoreEngraver(6f);
+        engraver.Draw(canvas, all, 360f);
+
+        int expected = all.Sum(m => MeasureLibrary.Get(m).Select(n => (n.Channel, n.AbsTick, n.Pitch)).Distinct().Count());
+        Assert.Equal(expected, canvas.Heads);
+        Assert.Equal(176, canvas.Texts);
+        Assert.True(canvas.Beams > 0);
+    }
+
+    [Theory]
+    [InlineData(330f, 2)]   // phone portrait
+    [InlineData(800f, 3)]   // tablet
+    public void Bars_per_row_scales_with_width(float width, int expected)
+    {
+        var e = new ModernMozart.Core.Notation.ScoreEngraver(ModernMozart.Core.Notation.ScoreEngraver.StaffSpaceFor(width));
+        Assert.Equal(expected, e.BarsPerRow(width));
+        Assert.True(e.Height(16, width) > 0);
+    }
+}
