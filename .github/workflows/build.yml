@@ -18,8 +18,6 @@ jobs:
   android:
     runs-on: ubuntu-latest
     needs: test
-    permissions:
-      contents: write          # publish the release
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
@@ -58,17 +56,6 @@ jobs:
           name: ModernMozart-apk
           path: ModernMozart.apk
 
-      # Phone-friendly link: .../releases/latest/download/ModernMozart.apk
-      - name: Release
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "build-${{ github.run_number }}" ModernMozart.apk \
-            --title "Build ${{ github.run_number }}" \
-            --notes "Built from ${GITHUB_SHA::7}. Open on your phone and tap Install." \
-            --latest
-
   # Boot an emulator, launch the APK, and capture logcat + a screenshot.
   smoke:
     runs-on: ubuntu-latest
@@ -95,8 +82,8 @@ jobs:
             sleep 25
             adb exec-out screencap -p > screen.png
             adb logcat -d > logcat.txt
-            (adb shell pidof com.x509cert.modernmozart && echo "APP RUNNING") || echo "APP NOT RUNNING"
-            echo "===== CRASH LOG =====" ; grep -E "AndroidRuntime|FATAL|monodroid|DOTNET|mono-rt|Exception|   at |libc  |DEBUG   " logcat.txt | head -150 || true
+            grep -E "FATAL EXCEPTION|E AndroidRuntime|MonoDroid|XamlParseException" logcat.txt | head -120 || true
+            adb shell pidof com.x509cert.modernmozart || (echo "::error::App is not running 25 s after launch" && exit 1)
       - uses: actions/upload-artifact@v5
         if: always()
         with:
@@ -104,3 +91,22 @@ jobs:
           path: |
             logcat.txt
             screen.png
+
+  # Only ship builds that survive launch. Phone link: .../releases/latest/download/ModernMozart.apk
+  release:
+    runs-on: ubuntu-latest
+    needs: smoke
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: ModernMozart-apk
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" ModernMozart.apk -R "${{ github.repository }}" \
+            --title "Build ${{ github.run_number }}" \
+            --notes "Built from ${GITHUB_SHA::7}. Passed emulator launch test. Open on your phone and tap Install." \
+            --latest
