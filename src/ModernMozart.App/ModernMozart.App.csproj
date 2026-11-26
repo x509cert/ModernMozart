@@ -14,6 +14,9 @@
 
     <!-- AudioTrack.Builder + PCM float output need API 23+. -->
     <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+
+    <!-- Compile bindings that set Source (the per-cell RelativeSource command). -->
+    <MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
   </PropertyGroup>
 
   <!-- Sideloadable APK for Release (default would be .aab for Play Store). -->
