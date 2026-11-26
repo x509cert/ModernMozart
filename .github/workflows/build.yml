@@ -96,6 +96,7 @@ jobs:
             adb exec-out screencap -p > screen.png
             adb logcat -d > logcat.txt
             (adb shell pidof com.x509cert.modernmozart && echo "APP RUNNING") || echo "APP NOT RUNNING"
+            echo "===== CRASH LOG =====" ; grep -E "AndroidRuntime|FATAL|monodroid|DOTNET|mono-rt|Exception|   at |libc  |DEBUG   " logcat.txt | head -150 || true
       - uses: actions/upload-artifact@v5
         if: always()
         with:
