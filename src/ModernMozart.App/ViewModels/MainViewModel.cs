@@ -20,6 +20,7 @@ public sealed class MainViewModel : ObservableObject
     private PerformancePlan? _plan;
     private int  _currentSlot = -1;
     private MeasureCell? _currentCell;
+    private readonly PlaybackClock _clock = new();
     private string _nowPlayingTitle = "Ready", _nowPlayingDetail = "Tap Play — or tap any bar to re-throw it.";
     private string _timeLabel = "";
     private RollEntry? _currentEntry;
@@ -41,8 +42,9 @@ public sealed class MainViewModel : ObservableObject
     }
 
     // ── Bindable state ────────────────────────────────────────────────────
-    public ObservableCollection<MeasureCell> SectionA { get; } = [];
-    public ObservableCollection<MeasureCell> SectionB { get; } = [];
+    /// <summary>Four lines of four bars: dice cells with the matching score underneath.</summary>
+    public IReadOnlyList<BarGroup> Groups { get; } =
+        [.. Enumerable.Range(0, WaltzRoll.Length / BarGroup.Size).Select(i => new BarGroup(i))];
 
     public ICommand RollCommand => _rollCommand;
     public ICommand PlayCommand => _playCommand;
@@ -50,9 +52,6 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ShareMidiCommand => _shareCommand;
     public ICommand LoadSoundFontCommand => _loadSfCommand;
     public ICommand RemoveSoundFontCommand => _removeSfCommand;
-
-    /// <summary>The sixteen measure numbers, for the score. A new array whenever the roll changes.</summary>
-    public IReadOnlyList<int> ScoreMeasures => [.. _roll.Measures];
 
     public int Tempo
     {
@@ -98,7 +97,17 @@ public sealed class MainViewModel : ObservableObject
     public double Progress         { get => _progress;         private set => Set(ref _progress, value); }
 
     /// <summary>Score position: bar index (0–15) + fraction through the bar; -1 when stopped.</summary>
-    public double ScorePlayhead    { get => _scorePlayhead;    private set => Set(ref _scorePlayhead, value); }
+    public double ScorePlayhead
+    {
+        get => _scorePlayhead;
+        private set
+        {
+            if (!Set(ref _scorePlayhead, value)) return;
+            foreach (var g in Groups)
+                g.Playhead = value >= g.FirstBarIndex && value < g.FirstBarIndex + BarGroup.Size
+                    ? value - g.FirstBarIndex : -1;
+        }
+    }
 
     /// <summary>The throw behind the bar being shown in the now-playing card, if any.</summary>
     public bool HasCurrentDice => _currentEntry is not null;
@@ -138,7 +147,7 @@ public sealed class MainViewModel : ObservableObject
         if (cell is null || _isPlaying) return;
         _roll = _roll.Reroll(cell.Position, Random.Shared);
         cell.Entry = _roll.Entries[cell.Position - 1];
-        Raise(nameof(ScoreMeasures));
+        GroupOf(cell.Position).Refresh();
         NowPlayingTitle  = $"Bar {cell.Measure}";
         NowPlayingDetail = $"Position {cell.Position} re-thrown — rolled {cell.Entry.Sum}";
         ShowDice(cell.Entry);
@@ -146,12 +155,13 @@ public sealed class MainViewModel : ObservableObject
 
     private void Rebuild()
     {
-        SectionA.Clear(); SectionB.Clear();
-        foreach (var e in _roll.Entries)
-            (e.Section == 'A' ? SectionA : SectionB).Add(new MeasureCell(e));
-        Raise(nameof(ScoreMeasures), nameof(LengthLabel));
+        foreach (var g in Groups)
+            g.Load(_roll.Entries.Skip(g.FirstBarIndex).Take(BarGroup.Size));
+        Raise(nameof(LengthLabel));
         ResetNowPlaying();
     }
+
+    private BarGroup GroupOf(int position) => Groups[(position - 1) / BarGroup.Size];
 
     // ── Playback ──────────────────────────────────────────────────────────
     private async Task TogglePlayAsync()
@@ -160,13 +170,15 @@ public sealed class MainViewModel : ObservableObject
 
         _plan    = PerformancePlan.Create(_roll, _tempo, Passes);
         _playCts = new CancellationTokenSource();
+        _clock.Reset();
         IsPlaying = true;
         DeviceDisplay.Current.KeepScreenOn = true;
 
         try
         {
             var plan = _plan;
-            await _player.PlayAsync(plan, t => MainThread.BeginInvokeOnMainThread(() => ShowPosition(plan, t)), _playCts.Token);
+            // The player reports what's been heard (any thread); the page calls UpdatePlayhead every frame.
+            await _player.PlayAsync(plan, _clock.Report, _playCts.Token);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -181,6 +193,12 @@ public sealed class MainViewModel : ObservableObject
             IsPlaying = false;
             ResetNowPlaying();
         }
+    }
+
+    /// <summary>Called once per display frame while playing: smooth position from the playback clock.</summary>
+    public void UpdatePlayhead()
+    {
+        if (_isPlaying && _plan is { } plan) ShowPosition(plan, _clock.Now());
     }
 
     private void ShowPosition(PerformancePlan plan, TimeSpan t)
@@ -200,7 +218,7 @@ public sealed class MainViewModel : ObservableObject
 
         if (slotIndex == _currentSlot) return;
         _currentSlot = slotIndex;
-        Highlight((e.Section == 'A' ? SectionA : SectionB)[(e.Position - 1) % WaltzRoll.HalfLength]);
+        Highlight(GroupOf(e.Position).Cells[(e.Position - 1) % BarGroup.Size]);
 
         string pass = plan.Passes > 1 ? $" · pass {slot.Pass}" : "";
         NowPlayingTitle  = $"Bar {e.Measure}";

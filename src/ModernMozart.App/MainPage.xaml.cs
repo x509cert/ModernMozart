@@ -5,8 +5,10 @@ namespace ModernMozart.App;
 
 public partial class MainPage : ContentPage
 {
+    private const string FrameAnimation = "playhead";
+
     private readonly MainViewModel _vm;
-    private double _followedSystemTop = double.NaN;
+    private int _followedGroup = -1;
 
     public MainPage(MainViewModel vm)
     {
@@ -21,20 +23,40 @@ public partial class MainPage : ContentPage
         await _vm.InitializeAsync();
     }
 
-    /// <summary>Keep the line of music being played on screen, scrolling once per new line.</summary>
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(MainViewModel.ScorePlayhead)) return;
+        switch (e.PropertyName)
+        {
+            // Drive the playhead from the platform's frame ticker (vsync on Android), so it
+            // moves every frame instead of whenever the audio device reports a position.
+            case nameof(MainViewModel.IsPlaying) when _vm.IsPlaying:
+                this.Animate(FrameAnimation, _ => _vm.UpdatePlayhead(), rate: 16, length: 1000,
+                             repeat: () => _vm.IsPlaying);
+                break;
+            case nameof(MainViewModel.IsPlaying):
+                this.AbortAnimation(FrameAnimation);
+                _followedGroup = -1;
+                break;
 
-        double playhead = _vm.ScorePlayhead;
-        if (playhead < 0) { _followedSystemTop = double.NaN; return; }
+            case nameof(MainViewModel.ScorePlayhead):
+                Follow(_vm.ScorePlayhead);
+                break;
+        }
+    }
 
-        double top = OffsetWithin(Score, Scroller) + Score.SystemTop((int)playhead);
-        if (top == _followedSystemTop) return;           // still on the same line
-        _followedSystemTop = top;
+    /// <summary>Keep the four-bar group being played (dice + staff) fully on screen.</summary>
+    private void Follow(double playhead)
+    {
+        if (playhead < 0) return;
+        int group = (int)playhead / BarGroup.Size;
+        if (group == _followedGroup) return;
+        _followedGroup = group;
 
-        double margin = 12, bottom = top + Score.SystemHeight;
-        bool visible = top - margin >= Scroller.ScrollY && bottom <= Scroller.ScrollY + Scroller.Height;
+        if (GroupsHost.Children.ElementAtOrDefault(group) is not VisualElement view) return;
+
+        const double margin = 12;
+        double top = OffsetWithin(view, Scroller), bottom = top + view.Height;
+        bool visible = top - margin >= Scroller.ScrollY && bottom + margin <= Scroller.ScrollY + Scroller.Height;
         if (!visible)
             _ = Scroller.ScrollToAsync(0, Math.Max(0, top - margin), animated: true);
     }

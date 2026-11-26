@@ -28,11 +28,27 @@ public sealed class ScoreEngraver(float staffSpace)
 
     public float S { get; } = staffSpace;
 
+    /// <summary>Force this many bars per line (0 = as many as fit).</summary>
+    public int FixedBarsPerRow { get; init; }
+
+    /// <summary>Index of the first measure drawn within the whole piece (for segments of a score).</summary>
+    public int FirstBarIndex { get; init; }
+
+    /// <summary>Bars in the whole piece (0 = just the measures drawn). Places the A/B double bar and final bar.</summary>
+    public int PieceLength { get; init; }
+
     /// <summary>Staff space that fits two bars per row on a phone, more on wider screens.</summary>
     public static float StaffSpaceFor(float width) => Math.Clamp(width / 62f, 4.5f, 8f);
 
-    public int BarsPerRow(float width)
-        => Math.Max(1, (int)((width / S - MarginLeft - HeaderWidth(timeSig: true)) / MinBar));
+    /// <summary>Staff space that fits exactly <paramref name="bars"/> bars across, with a full header.</summary>
+    public static float StaffSpaceToFit(float width, int bars)
+        => Math.Clamp(width / (MarginLeft + HeaderWidth(timeSig: true) + bars * 20f + ThickBar), 3.2f, 8f);
+
+    public int BarsPerRow(float width) => FixedBarsPerRow > 0
+        ? FixedBarsPerRow
+        : Math.Max(1, (int)((width / S - MarginLeft - HeaderWidth(timeSig: true)) / MinBar));
+
+    private bool TimeSigOnRow(int row) => row == 0 && FirstBarIndex == 0;
 
     public float Height(int barCount, float width)
     {
@@ -53,7 +69,7 @@ public sealed class ScoreEngraver(float staffSpace)
     {
         int per = BarsPerRow(width), row = index / per, col = index % per;
         float left   = MarginLeft * S, right = width - ThickBar * S;
-        float header = HeaderWidth(timeSig: row == 0) * S;
+        float header = HeaderWidth(TimeSigOnRow(row)) * S;
         float barW   = (right - left - header) / per;
         float bx     = left + header + barW * col;
         float top    = (row * SystemHeight + Top) * S;
@@ -70,7 +86,7 @@ public sealed class ScoreEngraver(float staffSpace)
         for (int first = 0, row = 0; first < measures.Count; first += per, row++)
         {
             int count     = Math.Min(per, measures.Count - first);
-            bool timeSig  = row == 0;
+            bool timeSig  = TimeSigOnRow(row);
             float top     = (row * SystemHeight + Top) * S;           // treble top line
             float bassTop = top + (4 + StaffGap) * S;
             float bottom  = bassTop + 4 * S;
@@ -99,8 +115,9 @@ public sealed class ScoreEngraver(float staffSpace)
                 DrawBar(c, MeasureLibrary.Get(measures[index]), bx, barW, top, bassTop);
 
                 float x = bx + barW;
-                bool last = index == measures.Count - 1;
-                bool endOfA = index == WaltzRoll.HalfLength - 1 && measures.Count == WaltzRoll.Length;
+                int pieceIndex = FirstBarIndex + index, total = PieceLength > 0 ? PieceLength : measures.Count;
+                bool last = pieceIndex == total - 1;
+                bool endOfA = pieceIndex == WaltzRoll.HalfLength - 1 && total == WaltzRoll.Length;
                 if (last)
                 {
                     c.Line(x - ThickBar * S / 2, top, x - ThickBar * S / 2, bottom, ThickBar * S);

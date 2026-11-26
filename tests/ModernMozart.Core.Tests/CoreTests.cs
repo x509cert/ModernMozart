@@ -146,9 +146,21 @@ public class ScoreEngraverTests
     [Fact]
     public void Playhead_at_bar_start_passes_through_first_notehead_centre()
     {
-        var measures = DiceTable.Roll(new Random(3)).Measures.ToArray();
+        var all = DiceTable.Roll(new Random(3)).Measures.ToArray();
         const float width = 330f;
-        var e = new ModernMozart.Core.Notation.ScoreEngraver(ModernMozart.Core.Notation.ScoreEngraver.StaffSpaceFor(width));
+
+        // Whole score, auto bars per line…
+        AssertAligned(new ModernMozart.Core.Notation.ScoreEngraver(ModernMozart.Core.Notation.ScoreEngraver.StaffSpaceFor(width)), all, width);
+
+        // …and the app's four-bar lines.
+        for (int g = 0; g < 4; g++)
+            AssertAligned(new ModernMozart.Core.Notation.ScoreEngraver(ModernMozart.Core.Notation.ScoreEngraver.StaffSpaceToFit(width, 4))
+                          { FixedBarsPerRow = 4, FirstBarIndex = g * 4, PieceLength = 16 },
+                          all.Skip(g * 4).Take(4).ToArray(), width);
+    }
+
+    private static void AssertAligned(ModernMozart.Core.Notation.ScoreEngraver e, int[] measures, float width)
+    {
         var cap = new HeadCapture();
         e.Draw(cap, measures, width);
 
@@ -163,3 +175,60 @@ public class ScoreEngraverTests
         }
     }
 }
+
+public class PlaybackClockTests
+{
+    [Fact]
+    public void Silent_until_the_device_reports_audio()
+    {
+        double now = 0;
+        var clock = new PlaybackClock(() => now);
+        clock.Report(TimeSpan.Zero);
+        now = 0.5;
+        Assert.Equal(TimeSpan.Zero, clock.Now());
+    }
+
+    [Fact]
+    public void Smooths_bursty_reports_into_even_frames()
+    {
+        // Device reports what's been heard in 40 ms bursts, a few ms late and uneven;
+        // the UI samples every 16.7 ms.
+        double now = 0;
+        var clock = new PlaybackClock(() => now);
+        var rng = new Random(1);
+        double nextReport = 0.04;
+        var frames = new List<double>();
+
+        for (now = 0; now < 5; now += 1 / 60.0)
+        {
+            while (nextReport <= now)
+            {
+                double heard = Math.Floor(nextReport / 0.04) * 0.04;      // quantised position
+                double at = now;
+                clock.Report(TimeSpan.FromSeconds(heard));
+                nextReport += 0.04 + (rng.NextDouble() - 0.5) * 0.02;     // ±10 ms jitter
+                _ = at;
+            }
+            frames.Add(clock.Now().TotalSeconds);
+        }
+
+        var steps = frames.Skip(30).Zip(frames.Skip(31), (a, b) => b - a).ToArray();
+        Assert.All(steps, d => Assert.True(d >= 0, "never moves backwards"));
+        double mean = steps.Average(), jitter = Math.Sqrt(steps.Average(d => (d - mean) * (d - mean)));
+        Assert.InRange(mean, 1 / 60.0 * 0.95, 1 / 60.0 * 1.05);
+        Assert.True(jitter < 0.004, $"frame-to-frame jitter {jitter * 1000:F1} ms");   // raw reports: ~19 ms
+        Assert.InRange(frames[^1] - now, -0.06, 0.06);                                  // stays on time
+    }
+
+    [Fact]
+    public void Snaps_on_a_real_jump()
+    {
+        double now = 0;
+        var clock = new PlaybackClock(() => now);
+        clock.Report(TimeSpan.FromSeconds(0.1));
+        now = 0.2;
+        clock.Report(TimeSpan.FromSeconds(2.0));     // e.g. device skipped ahead
+        Assert.InRange(clock.Now().TotalSeconds, 1.99, 2.01);
+    }
+}
+

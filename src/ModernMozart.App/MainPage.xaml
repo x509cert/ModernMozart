@@ -120,28 +120,31 @@
         <ScrollView Grid.Row="1" x:Name="Scroller">
         <VerticalStackLayout Padding="16,4,16,32" Spacing="16">
 
-            <!-- The sixteen bars -->
-            <Border Style="{StaticResource CardBorder}" Padding="12">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="PART A  ·  BARS 1–8" Style="{StaticResource Caption}" />
-                    <FlexLayout Wrap="Wrap" JustifyContent="Start"
-                                BindableLayout.ItemsSource="{Binding SectionA}"
-                                BindableLayout.ItemTemplate="{StaticResource CellTemplate}" />
-                    <Label Text="PART B  ·  BARS 9–16" Style="{StaticResource Caption}" Margin="0,8,0,0" />
-                    <FlexLayout Wrap="Wrap" JustifyContent="Start"
-                                BindableLayout.ItemsSource="{Binding SectionB}"
-                                BindableLayout.ItemTemplate="{StaticResource CellTemplate}" />
+            <!-- The sixteen bars, four at a time: dice cells with their line of score underneath -->
+            <Border Style="{StaticResource CardBorder}" Padding="12,12,12,8">
+                <VerticalStackLayout>
+                    <VerticalStackLayout x:Name="GroupsHost" Spacing="14"
+                                         BindableLayout.ItemsSource="{Binding Groups}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BarGroup">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding Caption}" Style="{StaticResource Caption}" Margin="4,0,0,2" />
+                                    <FlexLayout Wrap="Wrap" JustifyContent="Start"
+                                                BindableLayout.ItemsSource="{Binding Cells}"
+                                                BindableLayout.ItemTemplate="{StaticResource CellTemplate}" />
+                                    <controls:ScoreView Measures="{Binding Measures}"
+                                                        Playhead="{Binding Playhead}"
+                                                        BarsPerRow="{Binding BarsPerRow}"
+                                                        FirstBarIndex="{Binding FirstBarIndex}"
+                                                        PieceLength="{Binding PieceLength}"
+                                                        Ink="{StaticResource Parchment}"
+                                                        Highlight="{StaticResource Gilt}" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
                     <Label Text="Tap a bar to re-throw the dice for that position."
-                           Style="{StaticResource Caption}" HorizontalTextAlignment="Center" Margin="0,4,0,0" />
-                </VerticalStackLayout>
-            </Border>
-
-            <!-- The score: Mozart's table numbers above each bar -->
-            <Border Style="{StaticResource CardBorder}" Padding="8,16,12,16">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="SCORE" Style="{StaticResource Caption}" Margin="8,0,0,0" />
-                    <controls:ScoreView x:Name="Score" Measures="{Binding ScoreMeasures}" Playhead="{Binding ScorePlayhead}"
-                                Ink="{StaticResource Parchment}" Highlight="{StaticResource Gilt}" />
+                           Style="{StaticResource Caption}" HorizontalTextAlignment="Center" Margin="0,8,0,0" />
                 </VerticalStackLayout>
             </Border>
 

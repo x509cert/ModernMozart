@@ -25,7 +25,22 @@ public sealed class ScoreView : GraphicsView, IDrawable
         nameof(Highlight), typeof(Color), typeof(ScoreView), Colors.Gold,
         propertyChanged: (b, _, _) => ((ScoreView)b).Invalidate());
 
+    /// <summary>Fixed bars per line (0 = as many as fit); the staff is sized to fit them.</summary>
+    public static readonly BindableProperty BarsPerRowProperty = BindableProperty.Create(
+        nameof(BarsPerRow), typeof(int), typeof(ScoreView), 0, propertyChanged: (b, _, _) => ((ScoreView)b).Relayout());
+
+    /// <summary>Index of the first measure within the whole piece (time signature, barlines).</summary>
+    public static readonly BindableProperty FirstBarIndexProperty = BindableProperty.Create(
+        nameof(FirstBarIndex), typeof(int), typeof(ScoreView), 0, propertyChanged: (b, _, _) => ((ScoreView)b).Relayout());
+
+    public static readonly BindableProperty PieceLengthProperty = BindableProperty.Create(
+        nameof(PieceLength), typeof(int), typeof(ScoreView), 0, propertyChanged: (b, _, _) => ((ScoreView)b).Relayout());
+
     private float _width;
+
+    public int BarsPerRow    { get => (int)GetValue(BarsPerRowProperty);    set => SetValue(BarsPerRowProperty, value); }
+    public int FirstBarIndex { get => (int)GetValue(FirstBarIndexProperty); set => SetValue(FirstBarIndexProperty, value); }
+    public int PieceLength   { get => (int)GetValue(PieceLengthProperty);   set => SetValue(PieceLengthProperty, value); }
 
     public ScoreView() => Drawable = this;
 
@@ -65,7 +80,13 @@ public sealed class ScoreView : GraphicsView, IDrawable
         if (Math.Abs(width - _width) > 0.5) { _width = (float)width; Relayout(); }
     }
 
-    private ScoreEngraver Engraver => new(ScoreEngraver.StaffSpaceFor(_width));
+    private ScoreEngraver Engraver => new(BarsPerRow > 0 ? ScoreEngraver.StaffSpaceToFit(_width, BarsPerRow)
+                                                        : ScoreEngraver.StaffSpaceFor(_width))
+    {
+        FixedBarsPerRow = BarsPerRow,
+        FirstBarIndex   = FirstBarIndex,
+        PieceLength     = PieceLength,
+    };
 
     private void Relayout()
     {
