@@ -51,7 +51,7 @@ installed copy was signed with a different key (early builds were); uninstall it
 
 **Better piano sound:** in the app, tap **Load SoundFont…** and pick a piano `.sf2` file you've downloaded to the phone.
 
-### Install from a PC over USB (Developer mode)
+### Install from a PC over USB (Developer mode< NOT recommended unless you currently do Android development)
 
 Only needed if you're building the app yourself.
 
